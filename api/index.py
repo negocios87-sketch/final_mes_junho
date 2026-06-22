@@ -1,6 +1,6 @@
 """
 Painel de Atingimento — Elite, Sniper, Olympus
-Deploy: Vercel / Render
+Deploy: Vercel Pro
 """
 
 from flask import Flask, jsonify, request as freq
@@ -11,6 +11,7 @@ import calendar
 import math
 import os
 import time
+import json
 from datetime import date, datetime, timedelta
 from io import StringIO
 
@@ -31,25 +32,44 @@ URL_COLAB    = os.environ.get("URL_COLAB",    "https://docs.google.com/spreadshe
 URL_METAS    = os.environ.get("URL_METAS",    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSvwO3Ag2f2cbkVgR1pJZp6fANQcbualGKlAG50fmOljuEGKZ1gJBbSAjRdO3SomXUEVQOWnTvlfHRd/pub?gid=0&single=true&output=csv")
 URL_FERIADOS = os.environ.get("URL_FERIADOS", "https://docs.google.com/spreadsheets/d/e/2PACX-1vSvwO3Ag2f2cbkVgR1pJZp6fANQcbualGKlAG50fmOljuEGKZ1gJBbSAjRdO3SomXUEVQOWnTvlfHRd/pub?gid=1010928978&single=true&output=csv")
 
-DENISE_NORM     = "denise mussolin"
-FUNIL_SQUAD_MAP = {"elite": "Elite", "sniper": "Sniper", "olympus": "Olympus", "mgm": "Olympus", "navigator": "Olympus"}
-TIMES_ALVO      = {"elite", "sniper", "olympus", "mgm"}
-EXCLUIR_REU     = {"matheus paz"}
-
+DENISE_NORM        = "denise mussolin"
+FUNIL_SQUAD_MAP    = {"elite": "Elite", "sniper": "Sniper", "olympus": "Olympus", "mgm": "Olympus", "navigator": "Olympus"}
+TIMES_ALVO         = {"elite", "sniper", "olympus", "mgm"}
 META_REUNIOES_FIXA = 250
 
-# ── CACHE ────────────────────────────────────────────────────
-_cache = {}
-CACHE_TTL = 300  # 5 minutos
+# ── CACHE EM MEMÓRIA (sub-requests: users, pipelines, qual_ids) ──
+_mem = {}
+MEM_TTL = 300  # 5 min
 
-def cache_get(key):
-    item = _cache.get(key)
-    if item and time.time() - item['t'] < CACHE_TTL:
+def mem_get(key):
+    item = _mem.get(key)
+    if item and time.time() - item['t'] < MEM_TTL:
         return item['v']
     return None
 
-def cache_set(key, val):
-    _cache[key] = {'v': val, 't': time.time()}
+def mem_set(key, val):
+    _mem[key] = {'v': val, 't': time.time()}
+
+# ── CACHE EM DISCO (resultado completo do calcular) ──
+CACHE_FILE = "/tmp/painel_cache.json"
+CACHE_TTL  = 480  # 8 min
+
+def cache_full_get():
+    try:
+        with open(CACHE_FILE, "r") as f:
+            data = json.load(f)
+        if time.time() - data.get("_ts", 0) < CACHE_TTL:
+            return data.get("payload")
+    except:
+        pass
+    return None
+
+def cache_full_set(payload):
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump({"_ts": time.time(), "payload": payload}, f)
+    except:
+        pass
 
 # ── HELPERS ──────────────────────────────────────────────────
 
@@ -132,7 +152,7 @@ def buscar_colaboradores(mes=None, ano=None):
     return df
 
 def buscar_feriados():
-    cached = cache_get('feriados')
+    cached = mem_get('feriados')
     if cached is not None: return cached
     try:
         df = ler_sheet(URL_FERIADOS)
@@ -144,7 +164,7 @@ def buscar_feriados():
                     feriados.add(datetime.strptime(val, fmt).date())
                     break
                 except: continue
-        cache_set('feriados', feriados)
+        mem_set('feriados', feriados)
         return feriados
     except: return set()
 
@@ -186,35 +206,35 @@ def buscar_metas(ano, mes):
         })
     return rows
 
-# ── PIPEDRIVE (com cache) ────────────────────────────────────
+# ── PIPEDRIVE (com cache em memória) ─────────────────────────
 
 def buscar_users_pipe():
-    cached = cache_get('users')
+    cached = mem_get('users')
     if cached: return cached
     resp = req.get(f"{BASE_V1}/users", params={"api_token": API_KEY}, timeout=15)
     resp.raise_for_status()
     result = {u["id"]: u["name"] for u in (resp.json().get("data") or [])}
-    cache_set('users', result)
+    mem_set('users', result)
     return result
 
 def buscar_pipelines():
-    cached = cache_get('pipelines')
+    cached = mem_get('pipelines')
     if cached: return cached
     resp = req.get(f"{BASE_V1}/pipelines", params={"api_token": API_KEY}, timeout=15)
     resp.raise_for_status()
     result = {p["id"]: norm(p["name"]) for p in (resp.json().get("data") or [])}
-    cache_set('pipelines', result)
+    mem_set('pipelines', result)
     return result
 
 def buscar_qual_ids():
-    cached = cache_get('qual_ids')
+    cached = mem_get('qual_ids')
     if cached: return cached
     resp = req.get(f"{BASE_V1}/dealFields", params={"api_token": API_KEY}, timeout=15)
     resp.raise_for_status()
     for field in (resp.json().get("data") or []):
         if field.get("key") == CF_QUALIFICADOR:
             result = {norm(opt.get("label", "")): str(opt.get("id")) for opt in (field.get("options") or [])}
-            cache_set('qual_ids', result)
+            mem_set('qual_ids', result)
             return result
     return {}
 
@@ -315,15 +335,13 @@ def calcular(mes=None, ano=None):
     deals      = buscar_deals_mes(mes, ano)
     pipes      = buscar_pipelines()
     deal_ids_validos, mapa_deal_owner = buscar_deals_rv_mes(mes, ano)
-
-    # Reuniões: só a partir de hoje
     activities = buscar_activities_from_hoje(mes, ano)
 
     du_sheet = next((m["dias_uteis"] for m in metas if m["dias_uteis"] > 0), 0)
     du_total = du_sheet if du_sheet > 0 else du_calc
 
-    sub_col   = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
-    nome_col  = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
+    sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
+    nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
 
     nome_to_subarea = {}
     for _, row in colab_df.iterrows():
@@ -362,7 +380,6 @@ def calcular(mes=None, ano=None):
         closer_real[owner_nn]["valor"] += valor
         closer_real[owner_nn]["qtd"]   += 1
 
-    # ── Atividades agrupadas ──
     for d in deals:
         did = d["id"]
         uid = d.get("user_id")
@@ -389,22 +406,13 @@ def calcular(mes=None, ano=None):
                      and norm(nome_to_subarea.get(m["nome_norm"], "")) in TIMES_ALVO]
 
     # ── Totais financeiros ──
-    fin_meta = 0.0
-    fin_real = 0.0
-    fin_qtd  = 0
+    fin_meta = sum(m["meta_fin"] for m in closers_metas)
+    fin_real = sum(closer_real.get(m["nome_norm"], {"valor": 0})["valor"] for m in closers_metas)
+    fin_qtd  = sum(closer_real.get(m["nome_norm"], {"qtd": 0})["qtd"] for m in closers_metas)
 
-    for m in closers_metas:
-        nn = m["nome_norm"]
-        ri = closer_real.get(nn, {"valor": 0, "qtd": 0})
-        fin_meta += m["meta_fin"]
-        fin_real += ri["valor"]
-        fin_qtd  += ri["qtd"]
-
-    # Soma Denise
     for k, ri in closer_real.items():
         if not k.startswith("__denise__"): continue
-        squad_display = ri["denise_squad"]
-        if norm(squad_display) in TIMES_ALVO or squad_display == "Olympus":
+        if norm(ri["denise_squad"]) in TIMES_ALVO or ri["denise_squad"] == "Olympus":
             fin_real += ri["valor"]
             fin_qtd  += ri["qtd"]
 
@@ -416,8 +424,6 @@ def calcular(mes=None, ano=None):
         uid_str = str(uid) if uid else ""
         acts    = acts_by_owner.get(uid_str, [])
         reu_real += len([a for a in acts if act_valida_sdr(a)])
-
-    reu_meta = META_REUNIOES_FIXA
 
     return limpar_nans({
         "periodo": {
@@ -436,9 +442,9 @@ def calcular(mes=None, ano=None):
                 "qtd":       fin_qtd,
             },
             "reunioes": {
-                "meta":      reu_meta,
+                "meta":      META_REUNIOES_FIXA,
                 "validadas": reu_real,
-                "pct":       arred(safe_div(reu_real, reu_meta) * 100),
+                "pct":       arred(safe_div(reu_real, META_REUNIOES_FIXA) * 100),
             },
         },
     })
@@ -450,10 +456,28 @@ def api_dados():
     try:
         mes = freq.args.get("mes", type=int)
         ano = freq.args.get("ano", type=int)
-        return jsonify(calcular(mes=mes, ano=ano))
+        if not mes and not ano:
+            cached = cache_full_get()
+            if cached:
+                return jsonify(cached)
+        result = calcular(mes=mes, ano=ano)
+        if not mes and not ano:
+            cache_full_set(result)
+        return jsonify(result)
     except Exception as e:
         import traceback
         return jsonify({"erro": str(e), "trace": traceback.format_exc()}), 500
+
+@app.route("/api/cache/limpar", methods=["POST"])
+def limpar_cache():
+    try:
+        import os
+        if os.path.exists(CACHE_FILE):
+            os.remove(CACHE_FILE)
+        _mem.clear()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 
 @app.route("/api/debug/metas")
 def debug_metas():
@@ -465,8 +489,8 @@ def debug_metas():
     sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
     nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
     nome_to_sub = {norm(str(row.get(nome_col,""))): str(row.get(sub_col,"")).strip() for _, row in colab_df.iterrows()} if sub_col else {}
-    closers = [m for m in metas if m["meta_reu"] == 0 and m["meta_fin"] > 0]
-    closers_alvo = [m for m in closers if norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
+    closers_alvo = [m for m in metas if m["meta_reu"] == 0 and m["meta_fin"] > 0
+                    and norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
     return jsonify({
         "mes": mes, "ano": ano,
         "closers_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_fin": m["meta_fin"]} for m in closers_alvo],
@@ -483,8 +507,8 @@ def debug_sdrs():
     sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
     nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
     nome_to_sub = {norm(str(row.get(nome_col,""))): str(row.get(sub_col,"")).strip() for _, row in colab_df.iterrows()} if sub_col else {}
-    sdrs = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0]
-    sdrs_alvo = [m for m in sdrs if norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
+    sdrs_alvo = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0
+                 and norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
     return jsonify({
         "mes": mes, "ano": ano,
         "sdrs_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_reu": m["meta_reu"]} for m in sdrs_alvo],
