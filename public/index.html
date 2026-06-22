@@ -5,21 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Atingimento · Board Academy</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   --bg:      #050505;
-  --s1:      #0c0c0c;
-  --border:  #181818;
-  --text:    #d4d4d4;
-  --muted:   #3a3a3a;
-  --muted2:  #141414;
-  --white:   #f0f0f0;
-  --yellow:  #e8b800;
-  --green:   #16a34a;
-  --green2:  #22c55e;
+  --s1:      #0d0d0d;
+  --border:  #161616;
+  --text:    #c8c8c8;
+  --muted:   #383838;
+  --muted2:  #101010;
+  --white:   #efefef;
+  --y1:      #3d2e00;
+  --y2:      #7a5c00;
+  --y3:      #b88a00;
+  --y4:      #e8b800;
+  --y5:      #ffd54f;
+  --green:   #22c55e;
+  --green2:  #16a34a;
 }
 
 html, body {
@@ -32,16 +36,16 @@ html, body {
 
 /* ── TOPO ── */
 .topo {
-  padding: 32px 56px 0;
+  padding: 28px 52px 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
 }
 
 .topo-mes {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: .22em;
+  letter-spacing: .24em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -49,7 +53,7 @@ html, body {
 .topo-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
 }
 
 .topo-updated {
@@ -70,126 +74,192 @@ html, body {
 .timer-dot {
   width: 5px; height: 5px;
   border-radius: 50%;
-  background: var(--green2);
+  background: var(--green);
   animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: .3; }
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.3; transform:scale(.7); }
 }
 
 /* ── MAIN ── */
 main {
-  padding: 48px 56px 60px;
+  padding: 44px 52px 60px;
   display: flex;
   flex-direction: column;
-  gap: 64px;
+  gap: 52px;
 }
 
 /* ── BLOCO ── */
-.bloco {}
-
-.bloco-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-
 .bloco-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .2em;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .22em;
   text-transform: uppercase;
   color: var(--muted);
+  margin-bottom: 6px;
 }
 
 .bloco-nums {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
+  margin-bottom: 18px;
 }
 
 .bloco-nums strong {
-  color: var(--text);
-  font-weight: 500;
+  color: var(--white);
+  font-weight: 600;
 }
 
 /* ── BARRA ── */
-.bar-outer {
-  position: relative;
-}
+.bar-outer { position: relative; }
 
 .bar-track {
-  height: 44px;
+  height: 48px;
   background: var(--muted2);
-  border-radius: 3px;
+  border-radius: 4px;
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--border);
 }
 
+/* Gradiente fill em tons de amarelo */
 .bar-fill {
   position: absolute;
   top: 0; left: 0;
   height: 100%;
-  border-radius: 3px;
-  transition: width 1.2s cubic-bezier(.4,0,.2,1);
+  border-radius: 4px;
+  transition: width 1.3s cubic-bezier(.4,0,.2,1);
   max-width: 100%;
+  background: linear-gradient(90deg,
+    var(--y1) 0%,
+    var(--y2) 30%,
+    var(--y3) 60%,
+    var(--y4) 85%,
+    var(--y5) 100%
+  );
 }
 
-/* linhas divisórias */
+/* efeito shimmer na barra */
+.bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -150%;
+  width: 80%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.07) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { left: -150%; }
+  100% { left: 200%; }
+}
+
+/* divisórias dos níveis */
 .bar-div {
   position: absolute;
   top: 0; bottom: 0;
   width: 1px;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.55);
   z-index: 2;
 }
 
-/* % dentro da barra */
+/* rótulos dentro da barra nos pontos de nível */
+.bar-nivel-tag {
+  position: absolute;
+  top: 6px;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: rgba(0,0,0,0.7);
+  z-index: 3;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.bar-nivel-tag.depois {
+  color: rgba(255,255,255,0.25);
+}
+
+/* nome do prêmio dentro da barra */
+.bar-nivel-nome {
+  position: absolute;
+  bottom: 7px;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: .03em;
+  color: rgba(0,0,0,0.55);
+  z-index: 3;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.bar-nivel-nome.depois {
+  color: rgba(255,255,255,0.18);
+}
+
+/* % dentro da barra à direita */
 .bar-pct {
   position: absolute;
-  right: 18px;
+  right: 16px;
   top: 50%;
   transform: translateY(-50%);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  color: rgba(255,255,255,0.85);
-  z-index: 3;
+  color: rgba(255,255,255,0.9);
+  z-index: 4;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
   letter-spacing: .02em;
 }
 
-/* ── NÍVEIS ABAIXO ── */
-.niveis {
+/* ── PREMIAÇÕES ABAIXO (só financeiro) ── */
+.premiacao-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  margin-top: 1px;
+  margin-top: 2px;
   border: 1px solid var(--border);
-  border-radius: 0 0 3px 3px;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
   overflow: hidden;
 }
 
-.nivel {
+.prem-item {
   padding: 14px 16px;
   border-right: 1px solid var(--border);
   position: relative;
+  transition: background .2s;
 }
 
-.nivel:last-child { border-right: none; }
+.prem-item:last-child { border-right: none; }
 
-.nivel.atingido {
-  background: rgba(22,163,74,.06);
+/* destaque festa completa */
+.prem-item.festa {
+  background: rgba(232,184,0,.05);
 }
 
-.nivel.proximo {
+.prem-item.atingido {
+  background: rgba(22,197,94,.05);
+}
+
+.prem-item.proximo {
   background: rgba(232,184,0,.04);
 }
 
-.nivel-pct {
+.prem-pct {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   margin-bottom: 3px;
   display: flex;
@@ -197,56 +267,62 @@ main {
   gap: 6px;
 }
 
-.nivel-pct .check {
-  font-size: 11px;
-  color: var(--green2);
-}
-
-.nivel-nome {
+.prem-nome {
   font-size: 10px;
   color: var(--muted);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.nivel-val {
+/* festa completa — nome destacado */
+.prem-item.festa .prem-nome {
+  color: var(--y4);
+  font-weight: 600;
+}
+
+.prem-val {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: var(--muted);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
-.nivel-gap {
+.prem-gap {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
+}
+
+.check-icon {
+  font-size: 11px;
+  color: var(--green);
 }
 
 /* ── ESTADO ── */
 .estado {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 14px; min-height: 60vh;
+  gap: 14px; min-height: 70vh;
   color: var(--muted); font-size: 12px;
 }
 
 .spinner {
   width: 20px; height: 20px;
   border: 1.5px solid var(--border);
-  border-top-color: var(--yellow);
+  border-top-color: var(--y4);
   border-radius: 50%;
   animation: spin .8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 700px) {
-  .topo, main { padding-left: 20px; padding-right: 20px; }
-  .niveis { grid-template-columns: repeat(2, 1fr); }
-  .nivel:nth-child(2) { border-right: none; }
-  .nivel:nth-child(3) { border-top: 1px solid var(--border); }
-  .nivel:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
+  .topo, main { padding-left: 18px; padding-right: 18px; }
+  .premiacao-grid { grid-template-columns: repeat(2,1fr); }
+  .prem-item:nth-child(2) { border-right: none; }
+  .prem-item:nth-child(3) { border-top: 1px solid var(--border); }
+  .prem-item:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
 }
 </style>
 </head>
@@ -271,13 +347,13 @@ main {
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const NIVEIS = [
-  { pct: 71,  nome: 'Destrave dos Bônus'   },
-  { pct: 85,  nome: 'Happy Hour'            },
-  { pct: 95,  nome: 'Happy Hour Premium'    },
-  { pct: 100, nome: 'Festa Completa'        },
+  { pct: 71,  nome: 'Destrave dos Bônus'  },
+  { pct: 85,  nome: 'Happy Hour 🍻'        },
+  { pct: 95,  nome: 'Happy Hour Premium 🥂'},
+  { pct: 100, nome: 'Festa Completa 🎊'    },
 ];
 
-// ── Timer 3min ──
+// ── Timer ──
 let timerSecs = 180;
 let timerInterval;
 
@@ -299,27 +375,19 @@ function atualizarTimerUI() {
     `${m}:${String(s).padStart(2,'0')}`;
 }
 
-// ── Formatação ──
+// ── Format ──
 function brl(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
 
-function pctFmt(v) {
-  return Number(v).toFixed(1) + '%';
-}
-
-function corFill(pct) {
-  if (pct >= 100) return 'linear-gradient(90deg,#14532d 0%,#16a34a 100%)';
-  if (pct >= 95)  return 'linear-gradient(90deg,#14532d 0%,#22c55e 100%)';
-  if (pct >= 85)  return 'linear-gradient(90deg,#713f12 0%,#ca8a04 100%)';
-  if (pct >= 71)  return 'linear-gradient(90deg,#7c2d12 0%,#ea580c 100%)';
-  return                 'linear-gradient(90deg,#450a0a 0%,#b91c1c 100%)';
+function pctFmt(v, d=1) {
+  return Number(v).toFixed(d) + '%';
 }
 
 function corNivel(pct, nivel_pct) {
-  if (pct >= nivel_pct) return 'var(--green2)';
+  if (pct >= nivel_pct) return 'var(--green)';
   const prox = NIVEIS.find(n => pct < n.pct);
-  if (prox && prox.pct === nivel_pct) return 'var(--yellow)';
+  if (prox && prox.pct === nivel_pct) return 'var(--y4)';
   return 'var(--muted)';
 }
 
@@ -356,68 +424,81 @@ function render(data) {
   const reu_pct  = reu_meta ? reu_real / reu_meta * 100 : 0;
 
   document.getElementById('main').innerHTML = `
-    ${bloco({
-      label:    'Meta Financeira',
-      real_str: brl(fin_real),
-      meta_str: brl(fin_meta),
-      pct:      fin_pct,
-      meta:     fin_meta,
-      fmt_val:  v => brl(v),
-      fmt_gap:  v => brl(v),
-    })}
-    ${bloco({
-      label:    'Meta de Reuniões',
-      real_str: reu_real + ' reuniões',
-      meta_str: Math.round(reu_meta) + ' reuniões',
-      pct:      reu_pct,
-      meta:     reu_meta,
-      fmt_val:  v => Math.round(v) + ' reu.',
-      fmt_gap:  v => Math.round(v) + ' reu.',
-    })}
+    ${blocoFin({ fin_meta, fin_real, fin_pct, p })}
+    ${blocoReu({ reu_meta, reu_real, reu_pct, p })}
   `;
 }
 
-function bloco({ label, real_str, meta_str, pct, meta, fmt_val, fmt_gap }) {
+// ── Barra genérica ──
+function barraHTML({ pct, niveis_dentro, meta, fmt_val }) {
   const barW = Math.min(pct, 100);
 
-  const divs = NIVEIS.map(n =>
-    `<div class="bar-div" style="left:${n.pct}%"></div>`
-  ).join('');
+  const divs = NIVEIS.map(n => {
+    const dentro = pct >= n.pct;
+    return `
+      <div class="bar-div" style="left:${n.pct}%"></div>
+      ${niveis_dentro ? `
+        <div class="bar-nivel-tag ${dentro ? '' : 'depois'}" style="left:${n.pct}%">${n.pct}%</div>
+        <div class="bar-nivel-nome ${dentro ? '' : 'depois'}" style="left:${n.pct}%">${n.nome}</div>
+      ` : ''}
+    `;
+  }).join('');
 
-  const niveis = NIVEIS.map(n => {
-    const cor      = corNivel(pct, n.pct);
-    const atingido = pct >= n.pct;
-    const proximo  = !atingido && NIVEIS.find(x => pct < x.pct)?.pct === n.pct;
-    const val      = fmt_val(meta * n.pct / 100);
-    const gap      = fmt_gap(Math.max(meta * n.pct / 100 - (meta * pct / 100), 0));
+  return `
+  <div class="bar-track">
+    <div class="bar-fill" style="width:${barW}%"></div>
+    ${divs}
+    <div class="bar-pct">${pctFmt(pct)}</div>
+  </div>`;
+}
+
+// ── Bloco Financeiro ──
+function blocoFin({ fin_meta, fin_real, fin_pct, p }) {
+  const bar = barraHTML({ pct: fin_pct, niveis_dentro: true, meta: fin_meta, fmt_val: v => brl(v) });
+
+  const prems = NIVEIS.map((n, i) => {
+    const cor      = corNivel(fin_pct, n.pct);
+    const atingido = fin_pct >= n.pct;
+    const proximo  = !atingido && NIVEIS.find(x => fin_pct < x.pct)?.pct === n.pct;
+    const val      = fin_meta * n.pct / 100;
+    const gap      = Math.max(val - fin_real, 0);
+    const festa    = n.pct === 100;
 
     return `
-    <div class="nivel ${atingido ? 'atingido' : proximo ? 'proximo' : ''}">
-      <div class="nivel-pct" style="color:${cor}">
+    <div class="prem-item ${festa ? 'festa' : ''} ${atingido ? 'atingido' : ''} ${proximo ? 'proximo' : ''}">
+      <div class="prem-pct" style="color:${cor}">
         ${n.pct}%
-        ${atingido ? '<span class="check">✓</span>' : ''}
+        ${atingido ? '<span class="check-icon">✓</span>' : ''}
       </div>
-      <div class="nivel-nome">${n.nome}</div>
-      <div class="nivel-val">${val}</div>
-      <div class="nivel-gap" style="color:${atingido ? 'var(--green2)' : proximo ? 'var(--yellow)' : 'var(--muted)'}">
-        ${atingido ? 'Atingido' : 'Falta ' + gap}
+      <div class="prem-nome">${n.nome}</div>
+      <div class="prem-val">${brl(val)}</div>
+      <div class="prem-gap" style="color:${atingido ? 'var(--green)' : proximo ? 'var(--y4)' : 'var(--muted)'}">
+        ${atingido ? 'Atingido' : 'GAP ' + brl(gap)}
       </div>
     </div>`;
   }).join('');
 
   return `
-  <div class="bloco">
-    <div class="bloco-top">
-      <span class="bloco-label">${label}</span>
-      <span class="bloco-nums"><strong>${real_str}</strong> / ${meta_str}</span>
-    </div>
+  <div>
+    <div class="bloco-label">Meta Financeira · Closers</div>
+    <div class="bloco-nums"><strong>${brl(fin_real)}</strong> / ${brl(fin_meta)}</div>
     <div class="bar-outer">
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${barW}%;background:${corFill(pct)}"></div>
-        ${divs}
-        <div class="bar-pct">${pctFmt(pct)}</div>
-      </div>
-      <div class="niveis">${niveis}</div>
+      ${bar}
+      <div class="premiacao-grid">${prems}</div>
+    </div>
+  </div>`;
+}
+
+// ── Bloco Reuniões ── (sem premiações, só a barra)
+function blocoReu({ reu_meta, reu_real, reu_pct, p }) {
+  const bar = barraHTML({ pct: reu_pct, niveis_dentro: true, meta: reu_meta, fmt_val: v => Math.round(v) });
+
+  return `
+  <div>
+    <div class="bloco-label">Meta de Reuniões · SDRs <span style="color:var(--muted);font-weight:400;letter-spacing:.06em">· a partir de hoje</span></div>
+    <div class="bloco-nums"><strong>${reu_real} reuniões</strong> / ${reu_meta} reuniões</div>
+    <div class="bar-outer">
+      ${bar}
     </div>
   </div>`;
 }
