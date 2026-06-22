@@ -578,6 +578,12 @@ def debug_metas():
         "total_filtrado": sum(m["meta_fin"] for m in closers_alvo),
     })
 
+@app.route("/api/debug/sdrs")
+def debug_sdrs():
+    from flask import request as freq
+    hoje = date.today()
+    mes = freq.args.get("mes",
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
