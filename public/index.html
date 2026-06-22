@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Atingimento · Board Academy</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -15,12 +15,9 @@
   --border: #1e1e1e;
   --text:   #efefef;
   --muted:  #444;
-  --muted2: #1e1e1e;
+  --muted2: #1a1a1a;
   --yellow: #f5c800;
   --green:  #22c55e;
-  --red:    #ef4444;
-  --orange: #f97316;
-  --blue:   #60a5fa;
 }
 
 html, body {
@@ -30,7 +27,6 @@ html, body {
   min-height: 100vh;
 }
 
-/* HEADER */
 header {
   padding: 16px 32px;
   border-bottom: 1px solid var(--border);
@@ -70,192 +66,122 @@ header {
 .btn-refresh:hover { border-color: var(--yellow); color: var(--yellow); }
 .btn-refresh.loading { opacity: .4; pointer-events: none; }
 
-/* MAIN */
 main {
-  padding: 48px 40px;
+  padding: 60px 48px;
   max-width: 1100px;
   margin: 0 auto;
-}
-
-/* BLOCO DE BARRA */
-.barra-bloco {
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 36px 40px;
-  margin-bottom: 24px;
-}
-
-.barra-header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 28px;
+  flex-direction: column;
+  gap: 56px;
 }
 
-.barra-label {
-  font-size: 11px;
+/* BLOCO */
+.bloco { }
+
+.bloco-titulo {
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: .14em;
+  letter-spacing: .18em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.barra-valor {
+.bloco-titulo span {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 42px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1;
 }
 
-.barra-meta {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  color: var(--muted);
-  text-align: right;
-}
-
-.barra-pct-big {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 48px;
-  font-weight: 700;
-  line-height: 1;
-  text-align: right;
-}
-
-/* BARRA PRINCIPAL */
-.prog-container {
+/* BARRA */
+.bar-wrap {
   position: relative;
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
-.prog-track {
-  background: var(--muted2);
-  border-radius: 6px;
-  height: 28px;
+/* Faixas coloridas de fundo */
+.bar-track {
+  height: 52px;
+  border-radius: 8px;
   position: relative;
   overflow: hidden;
+  background: var(--muted2);
+  display: flex;
 }
 
-.prog-fill {
+/* segmentos de fundo com cor fraca */
+.seg {
   height: 100%;
-  border-radius: 6px;
-  transition: width 1s cubic-bezier(.4,0,.2,1);
-  max-width: 100%;
-  position: relative;
-}
-
-/* Marcações dos níveis NA barra */
-.nivel-mark {
   position: absolute;
   top: 0;
-  bottom: 0;
-  width: 2px;
+}
+
+/* preenchimento real */
+.bar-fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  border-radius: 8px;
+  transition: width 1.1s cubic-bezier(.4,0,.2,1);
   z-index: 2;
 }
 
-.nivel-mark-line {
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.4);
+/* linhas divisórias dos níveis */
+.bar-mark {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: rgba(0,0,0,0.5);
+  z-index: 3;
 }
 
-/* Labels dos níveis ABAIXO da barra */
-.niveis-labels {
+/* texto dentro da barra (% atual) */
+.bar-pct-inside {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  z-index: 4;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+/* labels abaixo da barra */
+.bar-labels {
+  display: flex;
   position: relative;
-  height: 36px;
-  margin-top: 4px;
+  margin-top: 10px;
+  height: 40px;
 }
 
-.nivel-label {
+.bar-label-item {
   position: absolute;
   transform: translateX(-50%);
   text-align: center;
+  line-height: 1.3;
 }
 
-.nivel-label .nl-pct {
+.bar-label-item .l-pct {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   display: block;
-  margin-bottom: 1px;
 }
 
-.nivel-label .nl-nome {
+.bar-label-item .l-nome {
   font-size: 9px;
   color: var(--muted);
+  display: block;
   white-space: nowrap;
 }
 
-/* STATUS DOS NÍVEIS */
-.niveis-status {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: 28px;
-}
-
-.nivel-card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px 16px;
-  position: relative;
-  overflow: hidden;
-}
-
-.nivel-card.atingido {
-  border-color: var(--green);
-  background: rgba(34,197,94,.04);
-}
-
-.nivel-card.proximo {
-  border-color: var(--yellow);
-  background: rgba(245,200,0,.04);
-}
-
-.nivel-num {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  margin-bottom: 6px;
-  letter-spacing: .06em;
-}
-
-.nivel-pct-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.nivel-nome {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
-
-.nivel-valor {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-
-.nivel-gap {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.nivel-check {
-  position: absolute;
-  top: 12px; right: 14px;
-  font-size: 16px;
-}
-
-/* ESTADO */
+/* estado */
 .estado {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -277,15 +203,6 @@ main {
   font-size: 10px;
   color: var(--muted);
   font-family: 'JetBrains Mono', monospace;
-  margin-top: 8px;
-}
-
-@media (max-width: 700px) {
-  main { padding: 20px 16px; }
-  .barra-bloco { padding: 24px 20px; }
-  .barra-valor { font-size: 28px; }
-  .barra-pct-big { font-size: 32px; }
-  .niveis-status { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 </head>
@@ -313,43 +230,37 @@ main {
 </main>
 
 <script>
-const MESES  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
 const NIVEIS = [
-  { pct: 71,  nome: 'Destrave dos Bônus' },
-  { pct: 85,  nome: 'Happy Hour 🍻' },
-  { pct: 95,  nome: 'Happy Hour Premium 🥂' },
-  { pct: 100, nome: 'Festa Completa 🎊' },
+  { pct: 71,  nome: 'Destrave dos Bônus',    cor: '#854d0e' },
+  { pct: 85,  nome: 'Happy Hour 🍻',          cor: '#713f12' },
+  { pct: 95,  nome: 'Happy Hour Premium 🥂',  cor: '#365314' },
+  { pct: 100, nome: 'Festa Completa 🎊',       cor: '#14532d' },
 ];
 
 function brl(v) {
-  if (v == null) return '—';
   return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
 
-function pctFmt(v, d=1) {
-  if (v == null) return '—';
-  return Number(v).toFixed(d) + '%';
+function pctFmt(v) {
+  return Number(v).toFixed(1) + '%';
 }
 
-function corPct(v) {
-  if (v >= 100) return 'var(--green)';
-  if (v >= 85)  return 'var(--yellow)';
-  if (v >= 71)  return 'var(--orange)';
-  return 'var(--red)';
+function corFill(pct) {
+  if (pct >= 100) return 'linear-gradient(90deg,#15803d,#22c55e)';
+  if (pct >= 95)  return 'linear-gradient(90deg,#166534,#4ade80)';
+  if (pct >= 85)  return 'linear-gradient(90deg,#ca8a04,#f5c800)';
+  if (pct >= 71)  return 'linear-gradient(90deg,#c2410c,#f97316)';
+  return 'linear-gradient(90deg,#991b1b,#ef4444)';
 }
 
-function gradFin(pct) {
-  if (pct >= 100) return 'linear-gradient(90deg, #16a34a, #22c55e)';
-  if (pct >= 85)  return 'linear-gradient(90deg, #ca8a04, #f5c800)';
-  if (pct >= 71)  return 'linear-gradient(90deg, #c2410c, #f97316)';
-  return 'linear-gradient(90deg, #b91c1c, #ef4444)';
-}
-
-function gradReu(pct) {
-  if (pct >= 100) return 'linear-gradient(90deg, #1d4ed8, #60a5fa)';
-  if (pct >= 85)  return 'linear-gradient(90deg, #7c3aed, #a78bfa)';
-  if (pct >= 71)  return 'linear-gradient(90deg, #0369a1, #38bdf8)';
-  return 'linear-gradient(90deg, #1e3a5f, #3b82f6)';
+function corLabel(pct, nivel_pct) {
+  if (pct >= nivel_pct) return 'var(--green)';
+  // próximo a bater
+  const prox = NIVEIS.find(n => pct < n.pct);
+  if (prox && prox.pct === nivel_pct) return 'var(--yellow)';
+  return 'var(--muted)';
 }
 
 async function carregar() {
@@ -357,7 +268,6 @@ async function carregar() {
   btn.classList.add('loading');
   document.getElementById('main').innerHTML =
     '<div class="estado"><div class="spinner"></div><span>Buscando dados...</span></div>';
-
   try {
     const resp = await fetch('/api/dados');
     const data = await resp.json();
@@ -365,7 +275,7 @@ async function carregar() {
     render(data);
   } catch(e) {
     document.getElementById('main').innerHTML =
-      `<div class="estado"><span style="color:var(--red)">Erro: ${e.message}</span></div>`;
+      `<div class="estado"><span style="color:#ef4444">Erro: ${e.message}</span></div>`;
   } finally {
     btn.classList.remove('loading');
   }
@@ -378,107 +288,70 @@ function render(data) {
   document.getElementById('h-sub').textContent =
     `${MESES[(p.mes||1)-1]}/${p.ano} · ${p.du_passados} de ${p.du_total} dias úteis · ${p.atualizado_em}`;
 
-  const fin_meta  = tot.financeiro?.meta     || 0;
-  const fin_real  = tot.financeiro?.realizado || 0;
-  const fin_pct   = fin_meta ? fin_real / fin_meta * 100 : 0;
+  const fin_meta = tot.financeiro?.meta      || 0;
+  const fin_real = tot.financeiro?.realizado  || 0;
+  const fin_pct  = fin_meta ? fin_real / fin_meta * 100 : 0;
 
-  const reu_meta  = tot.reunioes?.meta      || 0;
-  const reu_real  = tot.reunioes?.validadas  || 0;
-  const reu_pct   = reu_meta ? reu_real / reu_meta * 100 : 0;
+  const reu_meta = tot.reunioes?.meta       || 0;
+  const reu_real = tot.reunioes?.validadas   || 0;
+  const reu_pct  = reu_meta ? reu_real / reu_meta * 100 : 0;
 
   document.getElementById('main').innerHTML = `
-    ${blocoBar({
-      label:    'Meta Financeira · Closers',
-      valor:    brl(fin_real),
-      meta:     fin_meta,
-      real:     fin_real,
+    ${barra({
+      titulo:   'Meta Financeira · Closers',
+      real_str: brl(fin_real),
+      meta_str: brl(fin_meta),
       pct:      fin_pct,
-      grad:     gradFin(fin_pct),
-      fmt_meta: v => brl(v),
-      fmt_gap:  v => brl(v),
-      unidade:  '',
+      meta:     fin_meta,
+      fmt:      v => brl(v),
     })}
 
-    ${blocoBar({
-      label:    'Meta de Reuniões · SDRs',
-      valor:    reu_real + ' reuniões',
-      meta:     reu_meta,
-      real:     reu_real,
+    ${barra({
+      titulo:   'Meta de Reuniões · SDRs',
+      real_str: reu_real + ' reuniões',
+      meta_str: reu_meta + ' reuniões',
       pct:      reu_pct,
-      grad:     gradReu(reu_pct),
-      fmt_meta: v => Math.round(v) + ' reu.',
-      fmt_gap:  v => Math.round(v) + ' reu.',
-      unidade:  ' reu.',
+      meta:     reu_meta,
+      fmt:      v => Math.round(v) + ' reu.',
     })}
 
     <div class="updated">Atualizado em ${p.atualizado_em}</div>
   `;
 }
 
-function blocoBar({ label, valor, meta, real, pct, grad, fmt_meta, fmt_gap, unidade }) {
-  const barW  = Math.min(pct, 100);
-  const cor   = corPct(pct);
+function barra({ titulo, real_str, meta_str, pct, meta, fmt }) {
+  const barW = Math.min(pct, 100);
 
-  // níveis
-  const niveisMarks = NIVEIS.map(n => {
-    const atingido = pct >= n.pct;
-    const val_nivel = meta * n.pct / 100;
-    const gap       = Math.max(val_nivel - real, 0);
-    const proximo   = !atingido && NIVEIS.filter(x => pct < x.pct)[0]?.pct === n.pct;
-    return { ...n, atingido, proximo, val_nivel, gap };
-  });
+  const marks = NIVEIS.map(n =>
+    `<div class="bar-mark" style="left:${n.pct}%"></div>`
+  ).join('');
 
-  const marksHTML = niveisMarks.map(n => `
-    <div class="nivel-mark" style="left:${n.pct}%">
-      <div class="nivel-mark-line"></div>
-    </div>
-  `).join('');
-
-  const labelsHTML = niveisMarks.map(n => `
-    <div class="nivel-label" style="left:${n.pct}%">
-      <span class="nl-pct" style="color:${n.atingido ? 'var(--green)' : n.proximo ? 'var(--yellow)' : 'var(--muted)'}">${n.pct}%</span>
-      <span class="nl-nome">${fmt_meta(n.val_nivel)}</span>
-    </div>
-  `).join('');
-
-  const cardsHTML = niveisMarks.map((n, i) => `
-    <div class="nivel-card ${n.atingido ? 'atingido' : n.proximo ? 'proximo' : ''}">
-      <div class="nivel-num">${i+1}</div>
-      <div class="nivel-pct-label" style="color:${n.atingido ? 'var(--green)' : n.proximo ? 'var(--yellow)' : 'var(--muted)'}">
-        ${n.pct}%
-      </div>
-      <div class="nivel-nome">${n.nome}</div>
-      <div class="nivel-valor">Meta: ${fmt_meta(n.val_nivel)}</div>
-      <div class="nivel-gap" style="color:${n.atingido ? 'var(--green)' : n.proximo ? 'var(--yellow)' : 'var(--red)'}">
-        ${n.atingido ? '✓ Atingido' : 'Falta: ' + fmt_gap(n.gap)}
-      </div>
-      ${n.atingido ? '<div class="nivel-check">✓</div>' : ''}
-      ${n.proximo  ? '<div class="nivel-check" style="color:var(--yellow)">→</div>' : ''}
-    </div>
-  `).join('');
+  const labels = NIVEIS.map(n => {
+    const cor  = corLabel(pct, n.pct);
+    const val  = fmt(meta * n.pct / 100);
+    const icon = pct >= n.pct ? ' ✓' : '';
+    return `
+    <div class="bar-label-item" style="left:${n.pct}%">
+      <span class="l-pct" style="color:${cor}">${n.pct}%${icon}</span>
+      <span class="l-nome">${n.nome}</span>
+      <span class="l-nome" style="color:${cor}">${val}</span>
+    </div>`;
+  }).join('');
 
   return `
-  <div class="barra-bloco">
-    <div class="barra-header">
-      <div>
-        <div class="barra-label">${label}</div>
-        <div class="barra-valor" style="color:${cor}">${valor}</div>
-      </div>
-      <div>
-        <div class="barra-meta">Meta total: ${fmt_meta(meta)}</div>
-        <div class="barra-pct-big" style="color:${cor}">${pctFmt(pct)}</div>
-      </div>
+  <div class="bloco">
+    <div class="bloco-titulo">
+      ${titulo}
+      <span style="color:var(--muted)">${real_str} / ${meta_str}</span>
     </div>
-
-    <div class="prog-container">
-      <div class="prog-track">
-        <div class="prog-fill" style="width:${barW}%;background:${grad}"></div>
-        ${marksHTML}
+    <div class="bar-wrap">
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${barW}%;background:${corFill(pct)}"></div>
+        ${marks}
+        <div class="bar-pct-inside">${pctFmt(pct)}</div>
       </div>
-      <div class="niveis-labels">${labelsHTML}</div>
+      <div class="bar-labels">${labels}</div>
     </div>
-
-    <div class="niveis-status">${cardsHTML}</div>
   </div>`;
 }
 
