@@ -556,6 +556,28 @@ def index():
     from flask import send_from_directory
     return send_from_directory("../public", "index.html")
 
+@app.route("/api/debug/metas")
+def debug_metas():
+    from flask import request as freq
+    hoje = date.today()
+    mes = freq.args.get("mes", type=int) or hoje.month
+    ano = freq.args.get("ano", type=int) or hoje.year
+    metas = buscar_metas(ano, mes)
+    colab_df = buscar_colaboradores(mes=mes, ano=ano)
+    sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
+    nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
+    nome_to_sub = {norm(str(row.get(nome_col,""))): str(row.get(sub_col,"")).strip() for _, row in colab_df.iterrows()} if sub_col else {}
+    
+    closers = [m for m in metas if m["meta_reu"] == 0 and m["meta_fin"] > 0]
+    closers_alvo = [m for m in closers if norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
+    
+    return jsonify({
+        "mes": mes, "ano": ano,
+        "todos_closers": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_fin": m["meta_fin"]} for m in closers],
+        "closers_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_fin": m["meta_fin"]} for m in closers_alvo],
+        "total_filtrado": sum(m["meta_fin"] for m in closers_alvo),
+    })
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
