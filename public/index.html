@@ -5,19 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Atingimento · Board Academy</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:     #0a0a0a;
-  --s1:     #111;
-  --border: #1e1e1e;
-  --text:   #efefef;
-  --muted:  #444;
-  --muted2: #1a1a1a;
-  --yellow: #f5c800;
-  --green:  #22c55e;
+  --bg:      #050505;
+  --s1:      #0c0c0c;
+  --border:  #181818;
+  --text:    #d4d4d4;
+  --muted:   #3a3a3a;
+  --muted2:  #141414;
+  --white:   #f0f0f0;
+  --yellow:  #e8b800;
+  --green:   #16a34a;
+  --green2:  #22c55e;
 }
 
 html, body {
@@ -25,220 +27,279 @@ html, body {
   color: var(--text);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-header {
-  padding: 16px 32px;
-  border-bottom: 1px solid var(--border);
-  background: var(--s1);
+/* ── TOPO ── */
+.topo {
+  padding: 32px 56px 0;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
 }
 
-.h-left { display: flex; align-items: center; gap: 14px; }
-
-.logo {
-  background: var(--yellow);
-  color: #000;
-  font-weight: 900;
-  font-size: 12px;
-  width: 36px; height: 36px;
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-}
-
-.h-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
-.h-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
-
-.btn-refresh {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--muted);
+.topo-mes {
   font-size: 11px;
-  padding: 7px 14px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: 'Inter', sans-serif;
-  display: flex; align-items: center; gap: 6px;
-  transition: .15s;
-}
-.btn-refresh:hover { border-color: var(--yellow); color: var(--yellow); }
-.btn-refresh.loading { opacity: .4; pointer-events: none; }
-
-main {
-  padding: 60px 48px;
-  max-width: 1100px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 56px;
-}
-
-/* BLOCO */
-.bloco { }
-
-.bloco-titulo {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .18em;
+  font-weight: 600;
+  letter-spacing: .22em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 20px;
+}
+
+.topo-right {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 20px;
 }
 
-.bloco-titulo span {
+.topo-updated {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.topo-timer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.timer-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--green2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .3; }
+}
+
+/* ── MAIN ── */
+main {
+  padding: 48px 56px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+}
+
+/* ── BLOCO ── */
+.bloco {}
+
+.bloco-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.bloco-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bloco-nums {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  font-weight: 700;
+  color: var(--muted);
 }
 
-/* BARRA */
-.bar-wrap {
+.bloco-nums strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── BARRA ── */
+.bar-outer {
   position: relative;
-  margin-bottom: 0;
 }
 
-/* Faixas coloridas de fundo */
 .bar-track {
-  height: 52px;
-  border-radius: 8px;
+  height: 44px;
+  background: var(--muted2);
+  border-radius: 3px;
   position: relative;
   overflow: hidden;
-  background: var(--muted2);
-  display: flex;
 }
 
-/* segmentos de fundo com cor fraca */
-.seg {
-  height: 100%;
-  position: absolute;
-  top: 0;
-}
-
-/* preenchimento real */
 .bar-fill {
   position: absolute;
   top: 0; left: 0;
   height: 100%;
-  border-radius: 8px;
-  transition: width 1.1s cubic-bezier(.4,0,.2,1);
+  border-radius: 3px;
+  transition: width 1.2s cubic-bezier(.4,0,.2,1);
+  max-width: 100%;
+}
+
+/* linhas divisórias */
+.bar-div {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(0,0,0,0.6);
   z-index: 2;
 }
 
-/* linhas divisórias dos níveis */
-.bar-mark {
+/* % dentro da barra */
+.bar-pct {
   position: absolute;
-  top: 0; bottom: 0;
-  width: 2px;
-  background: rgba(0,0,0,0.5);
-  z-index: 3;
-}
-
-/* texto dentro da barra (% atual) */
-.bar-pct-inside {
-  position: absolute;
-  right: 14px;
+  right: 18px;
   top: 50%;
   transform: translateY(-50%);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
-  color: rgba(255,255,255,0.9);
-  z-index: 4;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.85);
+  z-index: 3;
+  letter-spacing: .02em;
 }
 
-/* labels abaixo da barra */
-.bar-labels {
-  display: flex;
+/* ── NÍVEIS ABAIXO ── */
+.niveis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 1px;
+  border: 1px solid var(--border);
+  border-radius: 0 0 3px 3px;
+  overflow: hidden;
+}
+
+.nivel {
+  padding: 14px 16px;
+  border-right: 1px solid var(--border);
   position: relative;
-  margin-top: 10px;
-  height: 40px;
 }
 
-.bar-label-item {
-  position: absolute;
-  transform: translateX(-50%);
-  text-align: center;
-  line-height: 1.3;
+.nivel:last-child { border-right: none; }
+
+.nivel.atingido {
+  background: rgba(22,163,74,.06);
 }
 
-.bar-label-item .l-pct {
+.nivel.proximo {
+  background: rgba(232,184,0,.04);
+}
+
+.nivel-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nivel-pct .check {
+  font-size: 11px;
+  color: var(--green2);
+}
+
+.nivel-nome {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nivel-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.nivel-gap {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  font-weight: 700;
-  display: block;
+  font-weight: 600;
 }
 
-.bar-label-item .l-nome {
-  font-size: 9px;
-  color: var(--muted);
-  display: block;
-  white-space: nowrap;
-}
-
-/* estado */
+/* ── ESTADO ── */
 .estado {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 14px; padding: 100px;
-  color: var(--muted); font-size: 13px;
+  gap: 14px; min-height: 60vh;
+  color: var(--muted); font-size: 12px;
 }
 
 .spinner {
-  width: 24px; height: 24px;
-  border: 2px solid var(--muted2);
+  width: 20px; height: 20px;
+  border: 1.5px solid var(--border);
   border-top-color: var(--yellow);
   border-radius: 50%;
-  animation: spin .7s linear infinite;
+  animation: spin .8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.updated {
-  text-align: center;
-  font-size: 10px;
-  color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
+@media (max-width: 700px) {
+  .topo, main { padding-left: 20px; padding-right: 20px; }
+  .niveis { grid-template-columns: repeat(2, 1fr); }
+  .nivel:nth-child(2) { border-right: none; }
+  .nivel:nth-child(3) { border-top: 1px solid var(--border); }
+  .nivel:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
 }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="h-left">
-    <div class="logo">BA</div>
-    <div>
-      <div class="h-title">Atingimento de Meta</div>
-      <div class="h-sub" id="h-sub">—</div>
-    </div>
+<div class="topo">
+  <span class="topo-mes" id="topo-mes">—</span>
+  <div class="topo-right">
+    <span class="topo-updated" id="topo-updated">—</span>
+    <span class="topo-timer">
+      <span class="timer-dot"></span>
+      <span id="timer-txt">3:00</span>
+    </span>
   </div>
-  <button class="btn-refresh" id="btn-refresh" onclick="carregar()">
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5">
-      <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.8 0 3.4.87 4.4 2.2"/>
-      <polyline points="10,1.5 14.5,1.5 14.5,6"/>
-    </svg>
-    Atualizar
-  </button>
-</header>
+</div>
 
 <main id="main">
-  <div class="estado"><div class="spinner"></div><span>Carregando...</span></div>
+  <div class="estado"><div class="spinner"></div></div>
 </main>
 
 <script>
-const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const NIVEIS = [
-  { pct: 71,  nome: 'Destrave dos Bônus',    cor: '#854d0e' },
-  { pct: 85,  nome: 'Happy Hour 🍻',          cor: '#713f12' },
-  { pct: 95,  nome: 'Happy Hour Premium 🥂',  cor: '#365314' },
-  { pct: 100, nome: 'Festa Completa 🎊',       cor: '#14532d' },
+  { pct: 71,  nome: 'Destrave dos Bônus'   },
+  { pct: 85,  nome: 'Happy Hour'            },
+  { pct: 95,  nome: 'Happy Hour Premium'    },
+  { pct: 100, nome: 'Festa Completa'        },
 ];
 
+// ── Timer 3min ──
+let timerSecs = 180;
+let timerInterval;
+
+function iniciarTimer() {
+  clearInterval(timerInterval);
+  timerSecs = 180;
+  atualizarTimerUI();
+  timerInterval = setInterval(() => {
+    timerSecs--;
+    atualizarTimerUI();
+    if (timerSecs <= 0) carregar();
+  }, 1000);
+}
+
+function atualizarTimerUI() {
+  const m = Math.floor(timerSecs / 60);
+  const s = timerSecs % 60;
+  document.getElementById('timer-txt').textContent =
+    `${m}:${String(s).padStart(2,'0')}`;
+}
+
+// ── Formatação ──
 function brl(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
@@ -248,26 +309,22 @@ function pctFmt(v) {
 }
 
 function corFill(pct) {
-  if (pct >= 100) return 'linear-gradient(90deg,#15803d,#22c55e)';
-  if (pct >= 95)  return 'linear-gradient(90deg,#166534,#4ade80)';
-  if (pct >= 85)  return 'linear-gradient(90deg,#ca8a04,#f5c800)';
-  if (pct >= 71)  return 'linear-gradient(90deg,#c2410c,#f97316)';
-  return 'linear-gradient(90deg,#991b1b,#ef4444)';
+  if (pct >= 100) return 'linear-gradient(90deg,#14532d 0%,#16a34a 100%)';
+  if (pct >= 95)  return 'linear-gradient(90deg,#14532d 0%,#22c55e 100%)';
+  if (pct >= 85)  return 'linear-gradient(90deg,#713f12 0%,#ca8a04 100%)';
+  if (pct >= 71)  return 'linear-gradient(90deg,#7c2d12 0%,#ea580c 100%)';
+  return                 'linear-gradient(90deg,#450a0a 0%,#b91c1c 100%)';
 }
 
-function corLabel(pct, nivel_pct) {
-  if (pct >= nivel_pct) return 'var(--green)';
-  // próximo a bater
+function corNivel(pct, nivel_pct) {
+  if (pct >= nivel_pct) return 'var(--green2)';
   const prox = NIVEIS.find(n => pct < n.pct);
   if (prox && prox.pct === nivel_pct) return 'var(--yellow)';
   return 'var(--muted)';
 }
 
+// ── Fetch ──
 async function carregar() {
-  const btn = document.getElementById('btn-refresh');
-  btn.classList.add('loading');
-  document.getElementById('main').innerHTML =
-    '<div class="estado"><div class="spinner"></div><span>Buscando dados...</span></div>';
   try {
     const resp = await fetch('/api/dados');
     const data = await resp.json();
@@ -275,18 +332,20 @@ async function carregar() {
     render(data);
   } catch(e) {
     document.getElementById('main').innerHTML =
-      `<div class="estado"><span style="color:#ef4444">Erro: ${e.message}</span></div>`;
-  } finally {
-    btn.classList.remove('loading');
+      `<div class="estado"><span style="color:#7f1d1d;font-size:11px">Erro: ${e.message}</span></div>`;
   }
+  iniciarTimer();
 }
 
+// ── Render ──
 function render(data) {
   const p   = data.periodo || {};
   const tot = data.total   || {};
 
-  document.getElementById('h-sub').textContent =
-    `${MESES[(p.mes||1)-1]}/${p.ano} · ${p.du_passados} de ${p.du_total} dias úteis · ${p.atualizado_em}`;
+  document.getElementById('topo-mes').textContent =
+    MESES[(p.mes||1)-1] + ' ' + p.ano;
+  document.getElementById('topo-updated').textContent =
+    'Atualizado ' + p.atualizado_em;
 
   const fin_meta = tot.financeiro?.meta      || 0;
   const fin_real = tot.financeiro?.realizado  || 0;
@@ -297,60 +356,68 @@ function render(data) {
   const reu_pct  = reu_meta ? reu_real / reu_meta * 100 : 0;
 
   document.getElementById('main').innerHTML = `
-    ${barra({
-      titulo:   'Meta Financeira · Closers',
+    ${bloco({
+      label:    'Meta Financeira',
       real_str: brl(fin_real),
       meta_str: brl(fin_meta),
       pct:      fin_pct,
       meta:     fin_meta,
-      fmt:      v => brl(v),
+      fmt_val:  v => brl(v),
+      fmt_gap:  v => brl(v),
     })}
-
-    ${barra({
-      titulo:   'Meta de Reuniões · SDRs',
+    ${bloco({
+      label:    'Meta de Reuniões',
       real_str: reu_real + ' reuniões',
-      meta_str: reu_meta + ' reuniões',
+      meta_str: Math.round(reu_meta) + ' reuniões',
       pct:      reu_pct,
       meta:     reu_meta,
-      fmt:      v => Math.round(v) + ' reu.',
+      fmt_val:  v => Math.round(v) + ' reu.',
+      fmt_gap:  v => Math.round(v) + ' reu.',
     })}
-
-    <div class="updated">Atualizado em ${p.atualizado_em}</div>
   `;
 }
 
-function barra({ titulo, real_str, meta_str, pct, meta, fmt }) {
+function bloco({ label, real_str, meta_str, pct, meta, fmt_val, fmt_gap }) {
   const barW = Math.min(pct, 100);
 
-  const marks = NIVEIS.map(n =>
-    `<div class="bar-mark" style="left:${n.pct}%"></div>`
+  const divs = NIVEIS.map(n =>
+    `<div class="bar-div" style="left:${n.pct}%"></div>`
   ).join('');
 
-  const labels = NIVEIS.map(n => {
-    const cor  = corLabel(pct, n.pct);
-    const val  = fmt(meta * n.pct / 100);
-    const icon = pct >= n.pct ? ' ✓' : '';
+  const niveis = NIVEIS.map(n => {
+    const cor      = corNivel(pct, n.pct);
+    const atingido = pct >= n.pct;
+    const proximo  = !atingido && NIVEIS.find(x => pct < x.pct)?.pct === n.pct;
+    const val      = fmt_val(meta * n.pct / 100);
+    const gap      = fmt_gap(Math.max(meta * n.pct / 100 - (meta * pct / 100), 0));
+
     return `
-    <div class="bar-label-item" style="left:${n.pct}%">
-      <span class="l-pct" style="color:${cor}">${n.pct}%${icon}</span>
-      <span class="l-nome">${n.nome}</span>
-      <span class="l-nome" style="color:${cor}">${val}</span>
+    <div class="nivel ${atingido ? 'atingido' : proximo ? 'proximo' : ''}">
+      <div class="nivel-pct" style="color:${cor}">
+        ${n.pct}%
+        ${atingido ? '<span class="check">✓</span>' : ''}
+      </div>
+      <div class="nivel-nome">${n.nome}</div>
+      <div class="nivel-val">${val}</div>
+      <div class="nivel-gap" style="color:${atingido ? 'var(--green2)' : proximo ? 'var(--yellow)' : 'var(--muted)'}">
+        ${atingido ? 'Atingido' : 'Falta ' + gap}
+      </div>
     </div>`;
   }).join('');
 
   return `
   <div class="bloco">
-    <div class="bloco-titulo">
-      ${titulo}
-      <span style="color:var(--muted)">${real_str} / ${meta_str}</span>
+    <div class="bloco-top">
+      <span class="bloco-label">${label}</span>
+      <span class="bloco-nums"><strong>${real_str}</strong> / ${meta_str}</span>
     </div>
-    <div class="bar-wrap">
+    <div class="bar-outer">
       <div class="bar-track">
         <div class="bar-fill" style="width:${barW}%;background:${corFill(pct)}"></div>
-        ${marks}
-        <div class="bar-pct-inside">${pctFmt(pct)}</div>
+        ${divs}
+        <div class="bar-pct">${pctFmt(pct)}</div>
       </div>
-      <div class="bar-labels">${labels}</div>
+      <div class="niveis">${niveis}</div>
     </div>
   </div>`;
 }
