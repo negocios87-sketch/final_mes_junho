@@ -1,15 +1,16 @@
 """
 Painel de Atingimento — Elite, Sniper, Olympus
-Deploy: Vercel (serverless)
+Deploy: Vercel / Render
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request as freq
 import requests as req
 import pandas as pd
 import unicodedata
 import calendar
 import math
 import os
+import time
 from datetime import date, datetime, timedelta
 from io import StringIO
 
@@ -34,6 +35,21 @@ DENISE_NORM     = "denise mussolin"
 FUNIL_SQUAD_MAP = {"elite": "Elite", "sniper": "Sniper", "olympus": "Olympus", "mgm": "Olympus", "navigator": "Olympus"}
 TIMES_ALVO      = {"elite", "sniper", "olympus", "mgm"}
 EXCLUIR_REU     = {"matheus paz"}
+
+META_REUNIOES_FIXA = 250
+
+# ── CACHE ────────────────────────────────────────────────────
+_cache = {}
+CACHE_TTL = 300  # 5 minutos
+
+def cache_get(key):
+    item = _cache.get(key)
+    if item and time.time() - item['t'] < CACHE_TTL:
+        return item['v']
+    return None
+
+def cache_set(key, val):
+    _cache[key] = {'v': val, 't': time.time()}
 
 # ── HELPERS ──────────────────────────────────────────────────
 
@@ -116,6 +132,8 @@ def buscar_colaboradores(mes=None, ano=None):
     return df
 
 def buscar_feriados():
+    cached = cache_get('feriados')
+    if cached is not None: return cached
     try:
         df = ler_sheet(URL_FERIADOS)
         feriados = set()
@@ -126,6 +144,7 @@ def buscar_feriados():
                     feriados.add(datetime.strptime(val, fmt).date())
                     break
                 except: continue
+        cache_set('feriados', feriados)
         return feriados
     except: return set()
 
@@ -167,24 +186,36 @@ def buscar_metas(ano, mes):
         })
     return rows
 
-# ── PIPEDRIVE ────────────────────────────────────────────────
+# ── PIPEDRIVE (com cache) ────────────────────────────────────
 
 def buscar_users_pipe():
+    cached = cache_get('users')
+    if cached: return cached
     resp = req.get(f"{BASE_V1}/users", params={"api_token": API_KEY}, timeout=15)
     resp.raise_for_status()
-    return {u["id"]: u["name"] for u in (resp.json().get("data") or [])}
+    result = {u["id"]: u["name"] for u in (resp.json().get("data") or [])}
+    cache_set('users', result)
+    return result
 
 def buscar_pipelines():
+    cached = cache_get('pipelines')
+    if cached: return cached
     resp = req.get(f"{BASE_V1}/pipelines", params={"api_token": API_KEY}, timeout=15)
     resp.raise_for_status()
-    return {p["id"]: norm(p["name"]) for p in (resp.json().get("data") or [])}
+    result = {p["id"]: norm(p["name"]) for p in (resp.json().get("data") or [])}
+    cache_set('pipelines', result)
+    return result
 
 def buscar_qual_ids():
+    cached = cache_get('qual_ids')
+    if cached: return cached
     resp = req.get(f"{BASE_V1}/dealFields", params={"api_token": API_KEY}, timeout=15)
     resp.raise_for_status()
     for field in (resp.json().get("data") or []):
         if field.get("key") == CF_QUALIFICADOR:
-            return {norm(opt.get("label", "")): str(opt.get("id")) for opt in (field.get("options") or [])}
+            result = {norm(opt.get("label", "")): str(opt.get("id")) for opt in (field.get("options") or [])}
+            cache_set('qual_ids', result)
+            return result
     return {}
 
 def won_time_br(deal):
@@ -239,9 +270,11 @@ def buscar_deals_rv_mes(mes, ano):
         start += 500
     return deal_ids_validos, mapa_owner
 
-def buscar_activities_mes(mes, ano):
+def buscar_activities_from_hoje(mes, ano):
+    """Busca atividades com due_date >= hoje dentro do mês."""
     todos, cursor = [], None
-    mes_str = f"{ano}-{mes:02d}"
+    hoje_str = date.today().strftime("%Y-%m-%d")
+    mes_str  = f"{ano}-{mes:02d}"
     while True:
         params = {"filter_id": FILTER_ACTIVITIES, "limit": 200}
         if cursor: params["cursor"] = cursor
@@ -251,7 +284,8 @@ def buscar_activities_mes(mes, ano):
         data = resp.json()
         lote = data.get("data") or []
         for act in lote:
-            if str(act.get("due_date", ""))[:7] == mes_str:
+            due = str(act.get("due_date", "") or "")[:10]
+            if due[:7] == mes_str and due >= hoje_str:
                 todos.append(act)
         cursor = data.get("additional_data", {}).get("next_cursor")
         if not cursor or not lote: break
@@ -279,33 +313,28 @@ def calcular(mes=None, ano=None):
     users_pipe = buscar_users_pipe()
     qual_ids   = buscar_qual_ids()
     deals      = buscar_deals_mes(mes, ano)
-    activities = buscar_activities_mes(mes, ano)
     pipes      = buscar_pipelines()
     deal_ids_validos, mapa_deal_owner = buscar_deals_rv_mes(mes, ano)
+
+    # Reuniões: só a partir de hoje
+    activities = buscar_activities_from_hoje(mes, ano)
 
     du_sheet = next((m["dias_uteis"] for m in metas if m["dias_uteis"] > 0), 0)
     du_total = du_sheet if du_sheet > 0 else du_calc
 
     sub_col   = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
     nome_col  = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
-    cargo_col = next((c for c in colab_df.columns if norm(c) == "cargo"), None)
 
     nome_to_subarea = {}
-    nome_to_cargo   = {}
     for _, row in colab_df.iterrows():
         nn  = norm(str(row.get(nome_col, "")))
         sub = str(row.get(sub_col, "")).strip() if sub_col else ""
-        cg  = str(row.get(cargo_col, "")).strip() if cargo_col else ""
         nome_to_subarea[nn] = sub
-        nome_to_cargo[nn]   = cg
 
     nome_norm_to_uid = {norm(name): uid for uid, name in users_pipe.items()}
     uid_to_nome_norm = {uid: norm(name) for uid, name in users_pipe.items()}
 
-    excluir_uids = {str(uid) for uid, name in users_pipe.items()
-                    if norm(name) in EXCLUIR_REU}
-
-    # ── Realizado financeiro por closer (valor BRUTO) ──
+    # ── Realizado financeiro (valor BRUTO) ──
     closer_real = {}
     for deal in deals:
         owner_nn = norm(get_owner_name(deal))
@@ -316,7 +345,6 @@ def calcular(mes=None, ano=None):
 
         valor = float(deal.get("value") or 0)
 
-        # Denise: distribui por funil
         if owner_nn == DENISE_NORM:
             pipe_id   = deal.get("pipeline_id")
             pipe_norm = pipes.get(pipe_id, "")
@@ -334,24 +362,17 @@ def calcular(mes=None, ano=None):
         closer_real[owner_nn]["valor"] += valor
         closer_real[owner_nn]["qtd"]   += 1
 
-    # ── Atividades agrupadas por owner ──
-    acts_by_owner    = {}
-    acts_by_deal_own = {}
+    # ── Atividades agrupadas ──
     for d in deals:
         did = d["id"]
         uid = d.get("user_id")
         oid = uid.get("id") if isinstance(uid, dict) else uid
-        if oid:
-            mapa_deal_owner.setdefault(did, oid)
+        if oid: mapa_deal_owner.setdefault(did, oid)
 
+    acts_by_owner = {}
     for act in activities:
         oid = str(act.get("owner_id", ""))
         acts_by_owner.setdefault(oid, []).append(act)
-        deal_id = act.get("deal_id")
-        if deal_id:
-            deal_own = str(mapa_deal_owner.get(deal_id, ""))
-            if deal_own:
-                acts_by_deal_own.setdefault(deal_own, []).append(act)
 
     def act_valida_sdr(act):
         if not (act.get("done") is True or act.get("status") == "done"): return False
@@ -362,158 +383,41 @@ def calcular(mes=None, ano=None):
         if deal_id and deal_id not in deal_ids_validos: return False
         return True
 
-    # ── Filtra metas pelos times alvo ──
     closers_metas = [m for m in metas if m["meta_reu"] == 0 and m["meta_fin"] > 0
                      and norm(nome_to_subarea.get(m["nome_norm"], "")) in TIMES_ALVO]
     sdrs_metas    = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0
                      and norm(nome_to_subarea.get(m["nome_norm"], "")) in TIMES_ALVO]
 
-    # ── Monta squads ──
-    squads = {}
+    # ── Totais financeiros ──
+    fin_meta = 0.0
+    fin_real = 0.0
+    fin_qtd  = 0
 
-    def get_squad(sub_norm):
-        display = {"mgm": "Olympus"}.get(sub_norm, sub_norm.capitalize())
-        if display not in squads:
-            squads[display] = {"nome": display, "closers": [], "sdrs": []}
-        return squads[display]
-
-    # Closers
     for m in closers_metas:
-        nn  = m["nome_norm"]
-        sub = norm(nome_to_subarea.get(nn, ""))
-        if sub not in TIMES_ALVO: continue
+        nn = m["nome_norm"]
+        ri = closer_real.get(nn, {"valor": 0, "qtd": 0})
+        fin_meta += m["meta_fin"]
+        fin_real += ri["valor"]
+        fin_qtd  += ri["qtd"]
 
-        ri    = closer_real.get(nn, {"valor": 0, "qtd": 0})
-        meta  = m["meta_fin"]
-        real  = ri["valor"]
-        qtd   = ri["qtd"]
-        mtd   = safe_div(meta, du_total) * du_pass
-        pct   = arred(safe_div(real, meta) * 100)
-        pct_mtd = arred(safe_div(real, mtd) * 100) if mtd else 0
-
-        get_squad(sub)["closers"].append({
-            "nome": m["nome"],
-            "meta": arred(meta),
-            "realizado": arred(real),
-            "qtd_ganhos": qtd,
-            "ticket_medio": arred(safe_div(real, qtd)) if qtd else 0,
-            "pct_atingido": pct,
-            "mtd": arred(mtd),
-            "pct_mtd": pct_mtd,
-            "deficit_meta": arred(meta - real),
-            "meta_dia": arred(safe_div(meta - real, du_rest)) if du_rest else 0,
-        })
-
-    # Injeta Denise nos squads dela
+    # Soma Denise
     for k, ri in closer_real.items():
         if not k.startswith("__denise__"): continue
         squad_display = ri["denise_squad"]
-        sub_norm      = norm(squad_display)
-        if sub_norm not in TIMES_ALVO and sub_norm != "olympus": continue
-        meta  = 0
-        real  = ri["valor"]
-        qtd   = ri["qtd"]
-        mtd   = 0
-        squads.setdefault(squad_display, {"nome": squad_display, "closers": [], "sdrs": []})
-        squads[squad_display]["closers"].append({
-            "nome": "Denise Mussolin*",
-            "meta": 0, "realizado": arred(real),
-            "qtd_ganhos": qtd,
-            "ticket_medio": arred(safe_div(real, qtd)) if qtd else 0,
-            "pct_atingido": 0, "mtd": 0, "pct_mtd": 0,
-            "deficit_meta": 0, "meta_dia": 0,
-            "is_head": True,
-        })
+        if norm(squad_display) in TIMES_ALVO or squad_display == "Olympus":
+            fin_real += ri["valor"]
+            fin_qtd  += ri["qtd"]
 
-    # SDRs
+    # ── Reuniões: meta fixa 250, due_date >= hoje ──
+    reu_real = 0
     for m in sdrs_metas:
-        nn  = m["nome_norm"]
-        sub = norm(nome_to_subarea.get(nn, ""))
-        if sub not in TIMES_ALVO: continue
+        nn      = m["nome_norm"]
+        uid     = nome_norm_to_uid.get(nn)
+        uid_str = str(uid) if uid else ""
+        acts    = acts_by_owner.get(uid_str, [])
+        reu_real += len([a for a in acts if act_valida_sdr(a)])
 
-        meta_reu = m["meta_reu"]
-        uid      = nome_norm_to_uid.get(nn)
-        uid_str  = str(uid) if uid else ""
-
-        acts_sdr  = acts_by_owner.get(uid_str, [])
-        validadas = len([a for a in acts_sdr if act_valida_sdr(a)])
-        deveria   = arred(safe_div(meta_reu, du_total) * du_pass)
-        pct_reu   = arred(safe_div(validadas, meta_reu) * 100)
-
-        qual_id   = qual_ids.get(nn)
-        deals_sdr = [d for d in deals if str(cf(d, CF_QUALIFICADOR)) == str(qual_id)] if qual_id else []
-        qtd_ganhos  = len(deals_sdr)
-        valor_ganho = sum(float(d.get("value") or 0) for d in deals_sdr)
-
-        get_squad(sub)["sdrs"].append({
-            "nome": m["nome"],
-            "meta_reuniao": arred(meta_reu),
-            "validadas": validadas,
-            "deveria_estar": deveria,
-            "faltam_mtd": arred(deveria - validadas),
-            "faltam_meta": arred(meta_reu - validadas),
-            "pct_reu": pct_reu,
-            "qtd_ganhos": qtd_ganhos,
-            "valor_ganho": arred(valor_ganho),
-        })
-
-    # ── Totais por squad ──
-    result_squads = []
-    ORDER = ["Sniper", "Elite", "Olympus"]
-    for nome_sq in ORDER:
-        sq = squads.get(nome_sq)
-        if not sq: continue
-
-        closers = sq["closers"]
-        sdrs    = sq["sdrs"]
-
-        # Exclui Denise* do total financeiro (ela não tem meta)
-        closers_com_meta = [c for c in closers if c.get("meta", 0) > 0]
-
-        t_meta     = sum(c["meta"]      for c in closers_com_meta)
-        t_real     = sum(c["realizado"] for c in closers_com_meta)
-        # Soma Denise separado no realizado
-        t_real    += sum(c["realizado"] for c in closers if c.get("is_head"))
-        t_qtd      = sum(c["qtd_ganhos"] for c in closers)
-        t_mtd      = arred(safe_div(t_meta, du_total) * du_pass)
-        t_pct      = arred(safe_div(t_real, t_meta) * 100)
-        t_pct_mtd  = arred(safe_div(t_real, t_mtd) * 100) if t_mtd else 0
-
-        t_meta_reu = sum(s["meta_reuniao"]  for s in sdrs)
-        t_val      = sum(s["validadas"]      for s in sdrs)
-        t_dev      = arred(sum(s["deveria_estar"] for s in sdrs))
-        t_pct_reu  = arred(safe_div(t_val, t_meta_reu) * 100)
-
-        result_squads.append({
-            "nome": nome_sq,
-            "financeiro": {
-                "meta":       arred(t_meta),
-                "realizado":  arred(t_real),
-                "pct":        t_pct,
-                "mtd":        t_mtd,
-                "pct_mtd":    t_pct_mtd,
-                "deficit":    arred(t_meta - t_real),
-                "meta_dia":   arred(safe_div(t_meta - t_real, du_rest)) if du_rest else 0,
-                "qtd_ganhos": t_qtd,
-                "ticket_medio": arred(safe_div(t_real, t_qtd)) if t_qtd else 0,
-                "closers": closers,
-            },
-            "reunioes": {
-                "meta":         arred(t_meta_reu),
-                "validadas":    t_val,
-                "deveria":      t_dev,
-                "faltam_meta":  arred(t_meta_reu - t_val),
-                "faltam_mtd":   arred(t_dev - t_val),
-                "pct":          t_pct_reu,
-                "sdrs": sdrs,
-            },
-        })
-
-    # ── Consolidado total ──
-    total_fin_meta  = sum(s["financeiro"]["meta"]      for s in result_squads)
-    total_fin_real  = sum(s["financeiro"]["realizado"]  for s in result_squads)
-    total_reu_meta  = sum(s["reunioes"]["meta"]         for s in result_squads)
-    total_reu_val   = sum(s["reunioes"]["validadas"]    for s in result_squads)
+    reu_meta = META_REUNIOES_FIXA
 
     return limpar_nans({
         "periodo": {
@@ -521,29 +425,29 @@ def calcular(mes=None, ano=None):
             "du_total": du_total,
             "du_passados": du_pass,
             "du_restantes": du_rest,
+            "hoje": hoje.strftime("%Y-%m-%d"),
             "atualizado_em": (datetime.now() - timedelta(hours=3)).strftime("%d/%m/%Y %H:%M"),
         },
-        "squads": result_squads,
         "total": {
             "financeiro": {
-                "meta": arred(total_fin_meta),
-                "realizado": arred(total_fin_real),
-                "pct": arred(safe_div(total_fin_real, total_fin_meta) * 100),
+                "meta":      arred(fin_meta),
+                "realizado": arred(fin_real),
+                "pct":       arred(safe_div(fin_real, fin_meta) * 100),
+                "qtd":       fin_qtd,
             },
             "reunioes": {
-                "meta": arred(total_reu_meta),
-                "validadas": total_reu_val,
-                "pct": arred(safe_div(total_reu_val, total_reu_meta) * 100),
+                "meta":      reu_meta,
+                "validadas": reu_real,
+                "pct":       arred(safe_div(reu_real, reu_meta) * 100),
             },
         },
     })
 
-# ── ROTA ─────────────────────────────────────────────────────
+# ── ROTAS ─────────────────────────────────────────────────────
 
 @app.route("/api/dados")
 def api_dados():
     try:
-        from flask import request as freq
         mes = freq.args.get("mes", type=int)
         ano = freq.args.get("ano", type=int)
         return jsonify(calcular(mes=mes, ano=ano))
@@ -551,14 +455,8 @@ def api_dados():
         import traceback
         return jsonify({"erro": str(e), "trace": traceback.format_exc()}), 500
 
-@app.route("/")
-def index():
-    from flask import send_from_directory
-    return send_from_directory("../public", "index.html")
-
 @app.route("/api/debug/metas")
 def debug_metas():
-    from flask import request as freq
     hoje = date.today()
     mes = freq.args.get("mes", type=int) or hoje.month
     ano = freq.args.get("ano", type=int) or hoje.year
@@ -567,20 +465,16 @@ def debug_metas():
     sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
     nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
     nome_to_sub = {norm(str(row.get(nome_col,""))): str(row.get(sub_col,"")).strip() for _, row in colab_df.iterrows()} if sub_col else {}
-    
     closers = [m for m in metas if m["meta_reu"] == 0 and m["meta_fin"] > 0]
     closers_alvo = [m for m in closers if norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
-    
     return jsonify({
         "mes": mes, "ano": ano,
-        "todos_closers": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_fin": m["meta_fin"]} for m in closers],
         "closers_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_fin": m["meta_fin"]} for m in closers_alvo],
         "total_filtrado": sum(m["meta_fin"] for m in closers_alvo),
     })
 
 @app.route("/api/debug/sdrs")
 def debug_sdrs():
-    from flask import request as freq
     hoje = date.today()
     mes = freq.args.get("mes", type=int) or hoje.month
     ano = freq.args.get("ano", type=int) or hoje.year
@@ -589,15 +483,20 @@ def debug_sdrs():
     sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
     nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
     nome_to_sub = {norm(str(row.get(nome_col,""))): str(row.get(sub_col,"")).strip() for _, row in colab_df.iterrows()} if sub_col else {}
-
     sdrs = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0]
     sdrs_alvo = [m for m in sdrs if norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
-
     return jsonify({
         "mes": mes, "ano": ano,
-        "sdrs_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_reu": m["meta_reu"], "meta_fin": m["meta_fin"]} for m in sdrs_alvo],
+        "sdrs_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_reu": m["meta_reu"]} for m in sdrs_alvo],
         "total_meta_reu": sum(m["meta_reu"] for m in sdrs_alvo),
+        "meta_fixa_painel": META_REUNIOES_FIXA,
+        "contando_de": date.today().strftime("%Y-%m-%d"),
     })
+
+@app.route("/")
+def index():
+    from flask import send_from_directory
+    return send_from_directory("../public", "index.html")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
