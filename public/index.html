@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Atingimento · Board Academy</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -29,25 +29,56 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── TOPO ── */
 .topo {
-  padding: 28px 52px 0;
+  padding: 36px 52px 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
 }
 
-.topo-mes {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .24em;
+.topo-left {}
+
+.topo-eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .28em;
   text-transform: uppercase;
   color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.topo-titulo {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -.01em;
+  line-height: 1;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topo-titulo .destaque {
+  color: var(--y4);
+}
+
+.topo-titulo .fire {
+  font-size: 30px;
+  animation: fire 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes fire {
+  0%   { transform: scale(1)    rotate(-4deg); }
+  100% { transform: scale(1.15) rotate(4deg);  }
 }
 
 .topo-right {
   display: flex;
-  align-items: center;
-  gap: 18px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding-top: 4px;
 }
 
 .topo-updated {
@@ -77,6 +108,7 @@ html, body {
   50%      { opacity:.3; }
 }
 
+/* ── MAIN ── */
 main {
   padding: 44px 52px 60px;
   display: flex;
@@ -105,7 +137,6 @@ main {
   font-weight: 600;
 }
 
-/* GAP de reuniões inline */
 .reu-gap-inline {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
@@ -113,10 +144,7 @@ main {
   margin-left: 14px;
 }
 
-.reu-gap-inline span {
-  color: var(--y4);
-  font-weight: 700;
-}
+.reu-gap-inline span { color: var(--y4); font-weight: 700; }
 
 /* ── BARRA ── */
 .bar-wrap {
@@ -221,7 +249,7 @@ main {
 
 .prem-item:last-child { border-right: none; }
 .prem-item.festa      { background: rgba(232,184,0,.04); }
-.prem-item.atingido   { background: rgba(22,197,94,.04); }
+.prem-item.atingido   { background: rgba(34,197,94,.04); }
 
 .prem-pct {
   font-family: 'JetBrains Mono', monospace;
@@ -249,7 +277,6 @@ main {
   margin-bottom: 8px;
 }
 
-/* CARIMBO */
 .prem-status {
   display: inline-flex;
   align-items: center;
@@ -274,10 +301,7 @@ main {
   background: rgba(34,197,94,.06);
 }
 
-.prem-status.sim::before {
-  content: '✓';
-  font-size: 11px;
-}
+.prem-status.sim::before { content: '✓ '; }
 
 /* ── ESTADO ── */
 .estado {
@@ -298,6 +322,7 @@ main {
 
 @media (max-width: 700px) {
   .topo, main { padding-left: 18px; padding-right: 18px; }
+  .topo-titulo { font-size: 24px; }
   .prem-grid { grid-template-columns: repeat(2,1fr); }
   .prem-item:nth-child(2) { border-right: none; }
   .prem-item:nth-child(3) { border-top: 1px solid var(--border); }
@@ -308,7 +333,13 @@ main {
 <body>
 
 <div class="topo">
-  <span class="topo-mes" id="topo-mes">—</span>
+  <div class="topo-left">
+    <div class="topo-eyebrow">Board Academy · Comercial</div>
+    <div class="topo-titulo">
+      <span class="fire">🔥</span>
+      Reta Final <span class="destaque" id="topo-mes">—</span>
+    </div>
+  </div>
   <div class="topo-right">
     <span class="topo-updated" id="topo-updated">—</span>
     <span class="topo-timer">
@@ -337,7 +368,7 @@ let timerInterval;
 
 function iniciarTimer() {
   clearInterval(timerInterval);
-  timerSecs = 600;
+  timerSecs = 300;
   atualizarTimerUI();
   timerInterval = setInterval(() => {
     timerSecs--;
@@ -413,7 +444,7 @@ function premios(pct, meta) {
       <div class="prem-val">${brl(val)}</div>
       ${atingido
         ? `<div class="prem-status sim">Conquistado</div>`
-        : `<div style="margin-bottom:4px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--muted)">GAP ${brl(gap)}</span></div>
+        : `<div style="margin-bottom:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--muted)">GAP ${brl(gap)}</span></div>
            <div class="prem-status nao">Não conquistado</div>`
       }
     </div>`;
@@ -426,7 +457,7 @@ function render(data) {
   const p   = data.periodo || {};
   const tot = data.total   || {};
 
-  document.getElementById('topo-mes').textContent = MESES[(p.mes||1)-1] + ' ' + p.ano;
+  document.getElementById('topo-mes').textContent = MESES[(p.mes||1)-1].toUpperCase() + ' ' + p.ano;
   document.getElementById('topo-updated').textContent = 'Atualizado ' + p.atualizado_em;
 
   const fin_meta = tot.financeiro?.meta      || 0;
