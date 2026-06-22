@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atingimento · Board Academy</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #080808;
+  --s1:      #101010;
+  --s2:      #161616;
+  --border:  #1c1c1c;
+  --border2: #252525;
+  --text:    #e8e8e8;
+  --muted:   #4a4a4a;
+  --muted2:  #222;
+  --yellow:  #f5c800;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --orange:  #f97316;
+  --blue:    #60a5fa;
+  --purple:  #a78bfa;
+
+  --elite:   #60a5fa;
+  --sniper:  #a78bfa;
+  --olympus: #fb923c;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+/* ─── HEADER ─── */
+header {
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--s1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.h-left { display: flex; align-items: center; gap: 14px; }
+
+.logo {
+  background: var(--yellow);
+  color: #000;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .05em;
+  width: 38px; height: 38px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.h-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.h-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+.h-right { display: flex; align-items: center; gap: 12px; }
+
+.badge-periodo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(245,200,0,.08);
+  border: 1px solid rgba(245,200,0,.2);
+  color: var(--yellow);
+}
+
+.btn-refresh {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  display: flex; align-items: center; gap: 6px;
+  transition: .15s;
+}
+.btn-refresh:hover { border-color: var(--yellow); color: var(--yellow); }
+.btn-refresh.loading { opacity: .5; pointer-events: none; }
+
+/* ─── MAIN ─── */
+main { padding: 28px; max-width: 1360px; margin: 0 auto; }
+
+/* ─── SECTION HEADER ─── */
+.sec-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.sec-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ─── GRID ─── */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 36px;
+}
+
+/* ─── CARD ─── */
+.card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.card-top {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-time {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.time-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+.time-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* cores por time */
+.elite   .time-dot { background: var(--elite); }
+.sniper  .time-dot { background: var(--sniper); }
+.olympus .time-dot { background: var(--olympus); }
+.elite   .time-label { color: var(--elite); }
+.sniper  .time-label { color: var(--sniper); }
+.olympus .time-label { color: var(--olympus); }
+.elite   .prog-fill  { background: var(--elite); }
+.sniper  .prog-fill  { background: var(--sniper); }
+.olympus .prog-fill  { background: var(--olympus); }
+
+/* ─── PCT BADGE ─── */
+.pct-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+.b-green  { background: rgba(34,197,94,.1);  color: var(--green);  }
+.b-yellow { background: rgba(245,200,0,.1);  color: var(--yellow); }
+.b-orange { background: rgba(249,115,22,.1); color: var(--orange); }
+.b-red    { background: rgba(239,68,68,.1);  color: var(--red);    }
+
+/* ─── CARD BODY ─── */
+.card-body { padding: 18px; }
+
+/* ─── NÚMERO GRANDE ─── */
+.big-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.num-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* ─── BARRA ─── */
+.prog-wrap {
+  background: var(--muted2);
+  border-radius: 2px;
+  height: 5px;
+  position: relative;
+  overflow: visible;
+  margin-bottom: 6px;
+}
+
+.prog-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .9s cubic-bezier(.4,0,.2,1);
+  max-width: 100%;
+}
+
+.prog-mtd {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1.5px;
+  background: rgba(255,255,255,.25);
+  border-radius: 1px;
+}
+
+.prog-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 16px;
+}
+
+/* ─── MINI STATS ─── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.stat-item .s-label {
+  font-size: 8px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.stat-item .s-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ─── SEPARADOR ─── */
+.sep { height: 1px; background: var(--border); margin: 28px 0; }
+
+/* ─── INDIVIDUAL SDR ─── */
+.sdr-list {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 14px;
+}
+
+.sdr-label {
+  font-size: 8px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.sdr-row {
+  margin-bottom: 9px;
+}
+
+.sdr-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.sdr-nome {
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+}
+
+.sdr-nums {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+
+.prog-wrap-sm {
+  background: var(--muted2);
+  border-radius: 2px;
+  height: 3px;
+  overflow: hidden;
+}
+
+.prog-fill-sm {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .9s cubic-bezier(.4,0,.2,1);
+  max-width: 100%;
+}
+
+/* ─── TOTAL BAR ─── */
+.total-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.total-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.total-card .t-label {
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.total-card .t-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--yellow);
+  margin-bottom: 4px;
+}
+
+.total-card .t-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ─── ESTADO ─── */
+.estado {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px; padding: 80px;
+  color: var(--muted); font-size: 13px;
+}
+
+.spinner {
+  width: 22px; height: 22px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--yellow);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.updated { text-align: right; font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 10px; }
+
+@media (max-width: 860px) {
+  .grid-3, .total-bar { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  main { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-left">
+    <div class="logo">BA</div>
+    <div>
+      <div class="h-title">Atingimento de Meta</div>
+      <div class="h-sub" id="h-sub">—</div>
+    </div>
+  </div>
+  <div class="h-right">
+    <span class="badge-periodo" id="badge-periodo">—</span>
+    <button class="btn-refresh" id="btn-refresh" onclick="carregar()">
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.8 0 3.4.87 4.4 2.2"/>
+        <polyline points="10,1.5 14.5,1.5 14.5,6"/>
+      </svg>
+      Atualizar
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="estado"><div class="spinner"></div><span>Carregando...</span></div>
+</main>
+
+<script>
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function brl(v) {
+  if (v == null) return '—';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+function pct(v, digits=1) {
+  if (v == null) return '—';
+  return Number(v).toFixed(digits) + '%';
+}
+
+function badgeCls(v) {
+  if (v >= 100) return 'b-green';
+  if (v >= 70)  return 'b-yellow';
+  if (v >= 40)  return 'b-orange';
+  return 'b-red';
+}
+
+function timeCls(nome) {
+  const n = nome.toLowerCase();
+  if (n === 'elite')   return 'elite';
+  if (n === 'sniper')  return 'sniper';
+  if (n.includes('olympus') || n === 'mgm') return 'olympus';
+  return '';
+}
+
+async function carregar() {
+  const btn = document.getElementById('btn-refresh');
+  btn.classList.add('loading');
+  document.getElementById('main').innerHTML = '<div class="estado"><div class="spinner"></div><span>Buscando dados...</span></div>';
+
+  try {
+    const resp = await fetch('/api/dados');
+    const data = await resp.json();
+    if (data.erro) throw new Error(data.erro);
+    render(data);
+  } catch(e) {
+    document.getElementById('main').innerHTML =
+      `<div class="estado"><span style="color:var(--red)">Erro: ${e.message}</span></div>`;
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+function render(data) {
+  const p  = data.periodo || {};
+  const sq = data.squads  || [];
+  const tot = data.total  || {};
+
+  // header
+  document.getElementById('badge-periodo').textContent =
+    `${MESES[(p.mes||1)-1]}/${p.ano}`;
+  document.getElementById('h-sub').textContent =
+    `${p.du_passados} de ${p.du_total} dias úteis · ${p.atualizado_em}`;
+
+  const mtd_ratio = p.du_total ? p.du_passados / p.du_total : 0;
+
+  const html = `
+    <!-- ═══ FINANCEIRO ═══ -->
+    <div class="sec-title">
+      <div class="sec-dot" style="background:var(--yellow)"></div>
+      Meta Financeira · Closers
+    </div>
+    <div class="grid-3">
+      ${sq.map(s => cardFin(s, mtd_ratio, p)).join('')}
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- ═══ REUNIÕES ═══ -->
+    <div class="sec-title">
+      <div class="sec-dot" style="background:var(--blue)"></div>
+      Meta de Reuniões · SDRs
+    </div>
+    <div class="grid-3">
+      ${sq.map(s => cardReu(s, mtd_ratio)).join('')}
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- ═══ TOTAIS ═══ -->
+    <div class="sec-title">
+      <div class="sec-dot" style="background:var(--muted)"></div>
+      Consolidado · Sniper + Elite + Olympus
+    </div>
+    <div class="total-bar">
+      <div class="total-card">
+        <div class="t-label">Realizado Financeiro</div>
+        <div class="t-num">${brl(tot.financeiro?.realizado)}</div>
+        <div class="t-sub">Meta ${brl(tot.financeiro?.meta)} · ${pct(tot.financeiro?.pct)}</div>
+      </div>
+      <div class="total-card">
+        <div class="t-label">Reuniões Realizadas</div>
+        <div class="t-num" style="color:var(--blue)">${tot.reunioes?.validadas ?? '—'}</div>
+        <div class="t-sub">Meta ${tot.reunioes?.meta ?? '—'} · ${pct(tot.reunioes?.pct)}</div>
+      </div>
+      <div class="total-card">
+        <div class="t-label">Dias Úteis Restantes</div>
+        <div class="t-num" style="color:var(--muted)">${p.du_restantes ?? '—'}</div>
+        <div class="t-sub">de ${p.du_total} dias · ${p.du_passados} passados</div>
+      </div>
+    </div>
+
+    <div class="updated">Atualizado em ${p.atualizado_em}</div>
+  `;
+
+  document.getElementById('main').innerHTML = html;
+}
+
+function cardFin(sq, mtd_ratio, p) {
+  const f   = sq.financeiro || {};
+  const cls = timeCls(sq.nome);
+  const bar = Math.min(f.pct || 0, 100);
+  const mtd = Math.min(mtd_ratio * 100, 100);
+  const du_rest = p.du_restantes || 0;
+
+  return `
+  <div class="card ${cls}">
+    <div class="card-top">
+      <div class="card-time">
+        <div class="time-dot"></div>
+        <span class="time-label">${sq.nome}</span>
+      </div>
+      <span class="pct-badge ${badgeCls(f.pct||0)}">${pct(f.pct)}</span>
+    </div>
+    <div class="card-body">
+      <div class="big-num">${brl(f.realizado)}</div>
+      <div class="num-meta">Meta: ${brl(f.meta)}</div>
+
+      <div class="prog-wrap">
+        <div class="prog-fill" style="width:${bar}%"></div>
+        <div class="prog-mtd" style="left:${mtd}%"></div>
+      </div>
+      <div class="prog-labels">
+        <span>0</span>
+        <span>MTD ${pct(f.pct_mtd)}</span>
+        <span>${brl(f.meta)}</span>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="s-label">Falta</div>
+          <div class="s-val" style="color:${(f.deficit||0) <= 0 ? 'var(--green)' : 'var(--red)'}">
+            ${(f.deficit||0) <= 0 ? '✓ Bateu' : brl(f.deficit)}
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="s-label">Meta/dia</div>
+          <div class="s-val">${du_rest > 0 ? brl(f.meta_dia) : '—'}</div>
+        </div>
+        <div class="stat-item">
+          <div class="s-label">Vendas</div>
+          <div class="s-val">${f.qtd_ganhos ?? 0}</div>
+        </div>
+        <div class="stat-item">
+          <div class="s-label">Ticket</div>
+          <div class="s-val">${brl(f.ticket_medio)}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function cardReu(sq, mtd_ratio) {
+  const r   = sq.reunioes || {};
+  const cls = timeCls(sq.nome);
+  const bar = Math.min(r.pct || 0, 100);
+  const mtd = Math.min(mtd_ratio * 100, 100);
+  const sdrs = r.sdrs || [];
+
+  return `
+  <div class="card ${cls}">
+    <div class="card-top">
+      <div class="card-time">
+        <div class="time-dot"></div>
+        <span class="time-label">${sq.nome}</span>
+      </div>
+      <span class="pct-badge ${badgeCls(r.pct||0)}">${pct(r.pct)}</span>
+    </div>
+    <div class="card-body">
+      <div class="big-num">${r.validadas ?? 0}<span style="font-size:15px;color:var(--muted);font-weight:400"> / ${r.meta ?? 0}</span></div>
+      <div class="num-meta">Deveria estar: ${r.deveria ?? 0}</div>
+
+      <div class="prog-wrap">
+        <div class="prog-fill" style="width:${bar}%"></div>
+        <div class="prog-mtd" style="left:${mtd}%"></div>
+      </div>
+      <div class="prog-labels">
+        <span>Gap meta: ${r.faltam_meta ?? 0}</span>
+        <span>Gap MTD: ${(r.faltam_mtd||0) <= 0 ? '✓' : r.faltam_mtd}</span>
+      </div>
+
+      ${sdrs.length ? `
+      <div class="sdr-list">
+        <div class="sdr-label">Individuais</div>
+        ${sdrs.map(s => {
+          const sp = s.meta_reuniao ? s.validadas / s.meta_reuniao * 100 : 0;
+          const bw = Math.min(sp, 100);
+          const nome = s.nome.split(' ')[0];
+          return `
+          <div class="sdr-row">
+            <div class="sdr-row-top">
+              <span class="sdr-nome">${nome}</span>
+              <span class="sdr-nums">
+                ${s.validadas}/${s.meta_reuniao || '—'}
+                <span class="pct-badge ${badgeCls(sp)}" style="font-size:9px;padding:2px 5px">${pct(sp,0)}</span>
+              </span>
+            </div>
+            <div class="prog-wrap-sm">
+              <div class="prog-fill-sm ${cls}" style="width:${bw}%;background:var(--${cls})"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+carregar();
+</script>
+</body>
+</html>
