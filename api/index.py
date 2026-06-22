@@ -582,7 +582,22 @@ def debug_metas():
 def debug_sdrs():
     from flask import request as freq
     hoje = date.today()
-    mes = freq.args.get("mes",
+    mes = freq.args.get("mes", type=int) or hoje.month
+    ano = freq.args.get("ano", type=int) or hoje.year
+    metas = buscar_metas(ano, mes)
+    colab_df = buscar_colaboradores(mes=mes, ano=ano)
+    sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
+    nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
+    nome_to_sub = {norm(str(row.get(nome_col,""))): str(row.get(sub_col,"")).strip() for _, row in colab_df.iterrows()} if sub_col else {}
+
+    sdrs = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0]
+    sdrs_alvo = [m for m in sdrs if norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
+
+    return jsonify({
+        "mes": mes, "ano": ano,
+        "sdrs_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_reu": m["meta_reu"], "meta_fin": m["meta_fin"]} for m in sdrs_alvo],
+        "total_meta_reu": sum(m["meta_reu"] for m in sdrs_alvo),
+    })
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
