@@ -105,7 +105,25 @@ main {
   font-weight: 600;
 }
 
+/* GAP de reuniões inline */
+.reu-gap-inline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 14px;
+}
+
+.reu-gap-inline span {
+  color: var(--y4);
+  font-weight: 700;
+}
+
 /* ── BARRA ── */
+.bar-wrap {
+  position: relative;
+  padding-bottom: 28px;
+}
+
 .bar-track {
   height: 48px;
   background: var(--muted2);
@@ -148,7 +166,6 @@ main {
   z-index: 2;
 }
 
-/* label do % abaixo da barra */
 .bar-nivel-label {
   position: absolute;
   top: 52px;
@@ -178,12 +195,6 @@ main {
   text-shadow: 0 1px 6px rgba(0,0,0,0.6);
 }
 
-/* espaço para os labels abaixo da barra */
-.bar-wrap {
-  position: relative;
-  padding-bottom: 28px;
-}
-
 /* ── PRÊMIOS ── */
 .prem-titulo {
   font-size: 9px;
@@ -205,22 +216,19 @@ main {
 .prem-item {
   padding: 16px 18px;
   border-right: 1px solid var(--border);
+  position: relative;
 }
 
 .prem-item:last-child { border-right: none; }
-
-.prem-item.festa     { background: rgba(232,184,0,.04); }
-.prem-item.atingido  { background: rgba(22,197,94,.04); }
-.prem-item.proximo   { background: rgba(232,184,0,.03); }
+.prem-item.festa      { background: rgba(232,184,0,.04); }
+.prem-item.atingido   { background: rgba(22,197,94,.04); }
 
 .prem-pct {
   font-family: 'JetBrains Mono', monospace;
   font-size: 15px;
   font-weight: 700;
   margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  color: var(--muted);
 }
 
 .prem-nome {
@@ -238,13 +246,37 @@ main {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: var(--muted);
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
-.prem-gap {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 600;
+/* CARIMBO */
+.prem-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+
+.prem-status.nao {
+  color: var(--muted);
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+.prem-status.sim {
+  color: var(--green);
+  border: 1px solid rgba(34,197,94,.3);
+  background: rgba(34,197,94,.06);
+}
+
+.prem-status.sim::before {
+  content: '✓';
+  font-size: 11px;
 }
 
 /* ── ESTADO ── */
@@ -370,23 +402,20 @@ function barra(pct) {
 function premios(pct, meta) {
   const items = NIVEIS.map(n => {
     const atingido = pct >= n.pct;
-    const proximo  = !atingido && NIVEIS.find(x => pct < x.pct)?.pct === n.pct;
     const festa    = n.pct === 100;
-    const cor      = corNivel(pct, n.pct);
     const val      = meta * n.pct / 100;
     const gap      = Math.max(val - (meta * pct / 100), 0);
 
     return `
-    <div class="prem-item ${festa?'festa':''} ${atingido?'atingido':''} ${proximo?'proximo':''}">
-      <div class="prem-pct" style="color:${cor}">
-        ${n.pct}%
-        ${atingido ? '<span style="font-size:11px;color:var(--green)">✓</span>' : ''}
-      </div>
+    <div class="prem-item ${festa?'festa':''} ${atingido?'atingido':''}">
+      <div class="prem-pct">${n.pct}%</div>
       <div class="prem-nome">${n.nome}</div>
       <div class="prem-val">${brl(val)}</div>
-      <div class="prem-gap" style="color:${atingido?'var(--green)':proximo?'var(--y4)':'var(--muted)'}">
-        ${atingido ? 'Atingido' : 'GAP ' + brl(gap)}
-      </div>
+      ${atingido
+        ? `<div class="prem-status sim">Conquistado</div>`
+        : `<div style="margin-bottom:4px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--muted)">GAP ${brl(gap)}</span></div>
+           <div class="prem-status nao">Não conquistado</div>`
+      }
     </div>`;
   }).join('');
 
@@ -407,6 +436,7 @@ function render(data) {
   const reu_meta = tot.reunioes?.meta       || 0;
   const reu_real = tot.reunioes?.validadas   || 0;
   const reu_pct  = reu_meta ? reu_real / reu_meta * 100 : 0;
+  const reu_gap  = Math.max(reu_meta - reu_real, 0);
 
   document.getElementById('main').innerHTML = `
     <div>
@@ -417,7 +447,13 @@ function render(data) {
 
     <div>
       <div class="bloco-label">Meta de Reuniões · SDRs · a partir de hoje</div>
-      <div class="bloco-nums"><strong>${reu_real} reuniões</strong> / ${reu_meta} reuniões</div>
+      <div class="bloco-nums">
+        <strong>${reu_real} reuniões</strong> / ${reu_meta} reuniões
+        ${reu_gap > 0
+          ? `<span class="reu-gap-inline">· GAP <span>${reu_gap} reu.</span></span>`
+          : `<span class="reu-gap-inline" style="color:var(--green)">· ✓ Meta batida</span>`
+        }
+      </div>
       ${barra(reu_pct)}
     </div>
 
