@@ -39,7 +39,7 @@ META_REUNIOES_FIXA = 250
 
 # ── CACHE EM MEMÓRIA ─────────────────────────────────────────
 _mem = {}
-MEM_TTL = 300  # 5 min
+MEM_TTL = 300
 
 def mem_get(key):
     item = _mem.get(key)
@@ -52,7 +52,7 @@ def mem_set(key, val):
 
 # ── CACHE EM DISCO ───────────────────────────────────────────
 CACHE_FILE = "/tmp/painel_cache.json"
-CACHE_TTL  = 480  # 8 min
+CACHE_TTL  = 480
 
 def cache_full_get():
     try:
@@ -270,29 +270,38 @@ def buscar_deals_mes(mes, ano):
     return todos
 
 def buscar_deals_rv_mes(mes, ano):
+    """Busca só deals do mês atual para validar reuniões — evita paginar 5000+ registros."""
     deal_ids_validos = set()
     mapa_owner = {}
     start = 0
+    mes_str = f"{ano}-{mes:02d}"
     while True:
         resp = req.get(f"{BASE_V1}/deals", params={
             "filter_id": FILTER_DEALS_RV, "status": "all_not_deleted",
+            "sort": "add_time DESC",
             "limit": 500, "start": start, "api_token": API_KEY,
         }, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         lote = data.get("data") or []
+        found_older = False
         for d in lote:
-            did = d["id"]
-            uid = d.get("user_id")
-            deal_ids_validos.add(did)
-            mapa_owner[did] = uid.get("id") if isinstance(uid, dict) else uid
+            add_time = str(d.get("add_time", ""))[:7]
+            if add_time >= mes_str:
+                did = d["id"]
+                uid = d.get("user_id")
+                deal_ids_validos.add(did)
+                mapa_owner[did] = uid.get("id") if isinstance(uid, dict) else uid
+            else:
+                found_older = True
         mais = data.get("additional_data", {}).get("pagination", {}).get("more_items_in_collection", False)
-        if not mais or not lote: break
+        if not mais or not lote or found_older: break
         start += 500
         time.sleep(0.2)
     return deal_ids_validos, mapa_owner
 
 def buscar_activities_from_hoje(mes, ano):
+    """Busca atividades com due_date >= hoje dentro do mês."""
     todos, cursor = [], None
     hoje_str = date.today().strftime("%Y-%m-%d")
     mes_str  = f"{ano}-{mes:02d}"
@@ -310,7 +319,7 @@ def buscar_activities_from_hoje(mes, ano):
                 todos.append(act)
         cursor = data.get("additional_data", {}).get("next_cursor")
         if not cursor or not lote: break
-        time.sleep(0.3)  # evita rate limit
+        time.sleep(0.3)
     return todos
 
 # ── CÁLCULO PRINCIPAL ─────────────────────────────────────────
