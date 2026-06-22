@@ -37,7 +37,7 @@ FUNIL_SQUAD_MAP    = {"elite": "Elite", "sniper": "Sniper", "olympus": "Olympus"
 TIMES_ALVO         = {"elite", "sniper", "olympus", "mgm"}
 META_REUNIOES_FIXA = 250
 
-# ── CACHE EM MEMÓRIA (sub-requests: users, pipelines, qual_ids) ──
+# ── CACHE EM MEMÓRIA ─────────────────────────────────────────
 _mem = {}
 MEM_TTL = 300  # 5 min
 
@@ -50,7 +50,7 @@ def mem_get(key):
 def mem_set(key, val):
     _mem[key] = {'v': val, 't': time.time()}
 
-# ── CACHE EM DISCO (resultado completo do calcular) ──
+# ── CACHE EM DISCO ───────────────────────────────────────────
 CACHE_FILE = "/tmp/painel_cache.json"
 CACHE_TTL  = 480  # 8 min
 
@@ -206,7 +206,7 @@ def buscar_metas(ano, mes):
         })
     return rows
 
-# ── PIPEDRIVE (com cache em memória) ─────────────────────────
+# ── PIPEDRIVE ────────────────────────────────────────────────
 
 def buscar_users_pipe():
     cached = mem_get('users')
@@ -266,6 +266,7 @@ def buscar_deals_mes(mes, ano):
         mais = data.get("additional_data", {}).get("pagination", {}).get("more_items_in_collection", False)
         if not mais or not lote or found_older: break
         start += 500
+        time.sleep(0.2)
     return todos
 
 def buscar_deals_rv_mes(mes, ano):
@@ -288,10 +289,10 @@ def buscar_deals_rv_mes(mes, ano):
         mais = data.get("additional_data", {}).get("pagination", {}).get("more_items_in_collection", False)
         if not mais or not lote: break
         start += 500
+        time.sleep(0.2)
     return deal_ids_validos, mapa_owner
 
 def buscar_activities_from_hoje(mes, ano):
-    """Busca atividades com due_date >= hoje dentro do mês."""
     todos, cursor = [], None
     hoje_str = date.today().strftime("%Y-%m-%d")
     mes_str  = f"{ano}-{mes:02d}"
@@ -309,6 +310,7 @@ def buscar_activities_from_hoje(mes, ano):
                 todos.append(act)
         cursor = data.get("additional_data", {}).get("next_cursor")
         if not cursor or not lote: break
+        time.sleep(0.3)  # evita rate limit
     return todos
 
 # ── CÁLCULO PRINCIPAL ─────────────────────────────────────────
@@ -471,7 +473,6 @@ def api_dados():
 @app.route("/api/cache/limpar", methods=["POST"])
 def limpar_cache():
     try:
-        import os
         if os.path.exists(CACHE_FILE):
             os.remove(CACHE_FILE)
         _mem.clear()
