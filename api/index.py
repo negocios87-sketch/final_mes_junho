@@ -303,7 +303,7 @@ def buscar_deals_rv_mes(mes, ano):
 def buscar_activities_from_hoje(mes, ano):
     """Busca atividades com due_date >= hoje dentro do mês."""
     todos, cursor = [], None
-    hoje_str = date.today().strftime("%Y-%m-%d")
+    hoje_str = "2026-06-22"
     mes_str  = f"{ano}-{mes:02d}"
     while True:
         params = {"filter_id": FILTER_ACTIVITIES, "limit": 200}
