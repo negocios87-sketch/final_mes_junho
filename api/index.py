@@ -36,6 +36,7 @@ DENISE_NORM        = "denise mussolin"
 FUNIL_SQUAD_MAP    = {"elite": "Elite", "sniper": "Sniper", "olympus": "Olympus", "mgm": "Olympus", "navigator": "Olympus"}
 TIMES_ALVO         = {"elite", "sniper", "olympus", "mgm"}
 META_REUNIOES_FIXA = 250
+DATA_CORTE_REU     = "2026-06-22"  # data fixa de corte para reuniões
 
 # ── CACHE EM MEMÓRIA ─────────────────────────────────────────
 _mem = {}
@@ -270,41 +271,34 @@ def buscar_deals_mes(mes, ano):
     return todos
 
 def buscar_deals_rv_mes(mes, ano):
-    """Busca só deals do mês atual para validar reuniões — evita paginar 5000+ registros."""
+    """Busca TODOS os deals do filtro RV — necessário pois reuniões
+    podem estar vinculadas a deals criados em meses anteriores."""
     deal_ids_validos = set()
     mapa_owner = {}
     start = 0
-    mes_str = f"{ano}-{mes:02d}"
     while True:
         resp = req.get(f"{BASE_V1}/deals", params={
             "filter_id": FILTER_DEALS_RV, "status": "all_not_deleted",
-            "sort": "add_time DESC",
             "limit": 500, "start": start, "api_token": API_KEY,
         }, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         lote = data.get("data") or []
-        found_older = False
         for d in lote:
-            add_time = str(d.get("add_time", ""))[:7]
-            if add_time >= mes_str:
-                did = d["id"]
-                uid = d.get("user_id")
-                deal_ids_validos.add(did)
-                mapa_owner[did] = uid.get("id") if isinstance(uid, dict) else uid
-            else:
-                found_older = True
+            did = d["id"]
+            uid = d.get("user_id")
+            deal_ids_validos.add(did)
+            mapa_owner[did] = uid.get("id") if isinstance(uid, dict) else uid
         mais = data.get("additional_data", {}).get("pagination", {}).get("more_items_in_collection", False)
-        if not mais or not lote or found_older: break
+        if not mais or not lote: break
         start += 500
-        time.sleep(0.2)
+        time.sleep(0.5)
     return deal_ids_validos, mapa_owner
 
-def buscar_activities_from_hoje(mes, ano):
-    """Busca atividades com due_date >= hoje dentro do mês."""
+def buscar_activities_from_corte(mes, ano):
+    """Busca atividades com due_date >= DATA_CORTE_REU dentro do mês."""
     todos, cursor = [], None
-    hoje_str = "2026-06-22"
-    mes_str  = f"{ano}-{mes:02d}"
+    mes_str = f"{ano}-{mes:02d}"
     while True:
         params = {"filter_id": FILTER_ACTIVITIES, "limit": 200}
         if cursor: params["cursor"] = cursor
@@ -315,7 +309,7 @@ def buscar_activities_from_hoje(mes, ano):
         lote = data.get("data") or []
         for act in lote:
             due = str(act.get("due_date", "") or "")[:10]
-            if due[:7] == mes_str and due >= hoje_str:
+            if due[:7] == mes_str and due >= DATA_CORTE_REU:
                 todos.append(act)
         cursor = data.get("additional_data", {}).get("next_cursor")
         if not cursor or not lote: break
@@ -346,7 +340,7 @@ def calcular(mes=None, ano=None):
     deals      = buscar_deals_mes(mes, ano)
     pipes      = buscar_pipelines()
     deal_ids_validos, mapa_deal_owner = buscar_deals_rv_mes(mes, ano)
-    activities = buscar_activities_from_hoje(mes, ano)
+    activities = buscar_activities_from_corte(mes, ano)
 
     du_sheet = next((m["dias_uteis"] for m in metas if m["dias_uteis"] > 0), 0)
     du_total = du_sheet if du_sheet > 0 else du_calc
@@ -427,7 +421,7 @@ def calcular(mes=None, ano=None):
             fin_real += ri["valor"]
             fin_qtd  += ri["qtd"]
 
-    # ── Reuniões: meta fixa 250, due_date >= hoje ──
+    # ── Reuniões: meta fixa 250, due_date >= DATA_CORTE_REU ──
     reu_real = 0
     for m in sdrs_metas:
         nn      = m["nome_norm"]
@@ -443,6 +437,7 @@ def calcular(mes=None, ano=None):
             "du_passados": du_pass,
             "du_restantes": du_rest,
             "hoje": hoje.strftime("%Y-%m-%d"),
+            "data_corte_reu": DATA_CORTE_REU,
             "atualizado_em": (datetime.now() - timedelta(hours=3)).strftime("%d/%m/%Y %H:%M"),
         },
         "total": {
@@ -524,7 +519,7 @@ def debug_sdrs():
         "sdrs_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_reu": m["meta_reu"]} for m in sdrs_alvo],
         "total_meta_reu": sum(m["meta_reu"] for m in sdrs_alvo),
         "meta_fixa_painel": META_REUNIOES_FIXA,
-        "contando_de": date.today().strftime("%Y-%m-%d"),
+        "data_corte": DATA_CORTE_REU,
     })
 
 @app.route("/")
