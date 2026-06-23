@@ -1,6 +1,7 @@
 """
 Painel de Atingimento — Elite, Sniper, Olympus
 Deploy: Vercel Pro
+Cache: GitHub repo negocios87-sketch/gerente_comercial pasta cache/
 """
 
 from flask import Flask, jsonify, request as freq
@@ -12,6 +13,7 @@ import math
 import os
 import time
 import json
+import base64
 from datetime import date, datetime, timedelta
 from io import StringIO
 
@@ -36,9 +38,60 @@ DENISE_NORM        = "denise mussolin"
 FUNIL_SQUAD_MAP    = {"elite": "Elite", "sniper": "Sniper", "olympus": "Olympus", "mgm": "Olympus", "navigator": "Olympus"}
 TIMES_ALVO         = {"elite", "sniper", "olympus", "mgm"}
 META_REUNIOES_FIXA = 250
-DATA_CORTE_REU     = "2026-06-22"  # data fixa de corte para reuniões
+DATA_CORTE_REU     = "2026-06-22"
 
-# ── CACHE EM MEMÓRIA ─────────────────────────────────────────
+# ── GITHUB CACHE ─────────────────────────────────────────────
+GITHUB_TOKEN  = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO   = "negocios87-sketch/gerente_comercial"
+GITHUB_BRANCH = "main"
+CACHE_PATH    = "cache/painel_atingimento.json"
+CACHE_TTL     = 480  # 8 minutos
+
+def github_get_cache():
+    """Lê o cache do GitHub. Retorna (payload, sha) ou (None, None)."""
+    try:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CACHE_PATH}"
+        resp = req.get(url, headers={
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }, timeout=10)
+        if resp.status_code == 404:
+            return None, None
+        resp.raise_for_status()
+        data = resp.json()
+        content = base64.b64decode(data["content"]).decode("utf-8")
+        parsed = json.loads(content)
+        sha = data["sha"]
+        # Verifica TTL
+        ts = parsed.get("_ts", 0)
+        if time.time() - ts < CACHE_TTL:
+            return parsed.get("payload"), sha
+        return None, sha  # expirado mas retorna sha para update
+    except Exception as e:
+        print(f"github_get_cache erro: {e}")
+        return None, None
+
+def github_set_cache(payload, sha=None):
+    """Salva o cache no GitHub."""
+    try:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CACHE_PATH}"
+        content = json.dumps({"_ts": time.time(), "payload": payload}, ensure_ascii=False)
+        body = {
+            "message": "cache painel atingimento",
+            "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
+            "branch": GITHUB_BRANCH,
+        }
+        if sha:
+            body["sha"] = sha
+        resp = req.put(url, json=body, headers={
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }, timeout=15)
+        resp.raise_for_status()
+    except Exception as e:
+        print(f"github_set_cache erro: {e}")
+
+# ── CACHE EM MEMÓRIA (users, pipelines, qual_ids) ────────────
 _mem = {}
 MEM_TTL = 300
 
@@ -50,27 +103,6 @@ def mem_get(key):
 
 def mem_set(key, val):
     _mem[key] = {'v': val, 't': time.time()}
-
-# ── CACHE EM DISCO ───────────────────────────────────────────
-CACHE_FILE = "/tmp/painel_cache.json"
-CACHE_TTL  = 480
-
-def cache_full_get():
-    try:
-        with open(CACHE_FILE, "r") as f:
-            data = json.load(f)
-        if time.time() - data.get("_ts", 0) < CACHE_TTL:
-            return data.get("payload")
-    except:
-        pass
-    return None
-
-def cache_full_set(payload):
-    try:
-        with open(CACHE_FILE, "w") as f:
-            json.dump({"_ts": time.time(), "payload": payload}, f)
-    except:
-        pass
 
 # ── HELPERS ──────────────────────────────────────────────────
 
@@ -89,12 +121,6 @@ def safe_div(a, b):
     try: return float(a) / float(b) if b else 0.0
     except: return 0.0
 
-def cf(deal, key):
-    val = deal.get(key)
-    if val is None: return None
-    if isinstance(val, dict): return val.get("value") or val.get("label")
-    return val
-
 def get_owner_name(deal):
     uid = deal.get("user_id")
     if isinstance(uid, dict): return uid.get("name", "")
@@ -104,6 +130,12 @@ def get_owner_id(deal):
     uid = deal.get("user_id")
     if isinstance(uid, dict): return uid.get("id")
     return uid
+
+def cf(deal, key):
+    val = deal.get(key)
+    if val is None: return None
+    if isinstance(val, dict): return val.get("value") or val.get("label")
+    return val
 
 def limpar_nans(obj):
     if isinstance(obj, dict): return {k: limpar_nans(v) for k, v in obj.items()}
@@ -271,8 +303,6 @@ def buscar_deals_mes(mes, ano):
     return todos
 
 def buscar_deals_rv_mes(mes, ano):
-    """Busca TODOS os deals do filtro RV — necessário pois reuniões
-    podem estar vinculadas a deals criados em meses anteriores."""
     deal_ids_validos = set()
     mapa_owner = {}
     start = 0
@@ -296,7 +326,6 @@ def buscar_deals_rv_mes(mes, ano):
     return deal_ids_validos, mapa_owner
 
 def buscar_activities_from_corte(mes, ano):
-    """Busca atividades com due_date >= DATA_CORTE_REU dentro do mês."""
     todos, cursor = [], None
     mes_str = f"{ano}-{mes:02d}"
     while True:
@@ -357,7 +386,6 @@ def calcular(mes=None, ano=None):
     nome_norm_to_uid = {norm(name): uid for uid, name in users_pipe.items()}
     uid_to_nome_norm = {uid: norm(name) for uid, name in users_pipe.items()}
 
-    # ── Realizado financeiro (valor BRUTO) ──
     closer_real = {}
     for deal in deals:
         owner_nn = norm(get_owner_name(deal))
@@ -365,9 +393,7 @@ def calcular(mes=None, ano=None):
             oid = get_owner_id(deal)
             owner_nn = uid_to_nome_norm.get(oid, "")
         if not owner_nn: continue
-
         valor = float(deal.get("value") or 0)
-
         if owner_nn == DENISE_NORM:
             pipe_id   = deal.get("pipeline_id")
             pipe_norm = pipes.get(pipe_id, "")
@@ -379,7 +405,6 @@ def calcular(mes=None, ano=None):
                 closer_real[k]["valor"] += valor
                 closer_real[k]["qtd"]   += 1
                 continue
-
         if owner_nn not in closer_real:
             closer_real[owner_nn] = {"valor": 0, "qtd": 0}
         closer_real[owner_nn]["valor"] += valor
@@ -410,7 +435,6 @@ def calcular(mes=None, ano=None):
     sdrs_metas    = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0
                      and norm(nome_to_subarea.get(m["nome_norm"], "")) in TIMES_ALVO]
 
-    # ── Totais financeiros ──
     fin_meta = sum(m["meta_fin"] for m in closers_metas)
     fin_real = sum(closer_real.get(m["nome_norm"], {"valor": 0})["valor"] for m in closers_metas)
     fin_qtd  = sum(closer_real.get(m["nome_norm"], {"qtd": 0})["qtd"] for m in closers_metas)
@@ -421,7 +445,6 @@ def calcular(mes=None, ano=None):
             fin_real += ri["valor"]
             fin_qtd  += ri["qtd"]
 
-    # ── Reuniões: meta fixa 250, due_date >= DATA_CORTE_REU ──
     reu_real = 0
     for m in sdrs_metas:
         nn      = m["nome_norm"]
@@ -462,23 +485,45 @@ def api_dados():
     try:
         mes = freq.args.get("mes", type=int)
         ano = freq.args.get("ano", type=int)
+
+        # Só usa cache quando não tem parâmetro de mês/ano
         if not mes and not ano:
-            cached = cache_full_get()
-            if cached:
-                return jsonify(cached)
-        result = calcular(mes=mes, ano=ano)
-        if not mes and not ano:
-            cache_full_set(result)
-        return jsonify(result)
+            payload, sha = github_get_cache()
+            if payload:
+                return jsonify(payload)
+            # Cache expirado ou inexistente — recalcula
+            result = calcular()
+            github_set_cache(result, sha)
+            return jsonify(result)
+
+        return jsonify(calcular(mes=mes, ano=ano))
+
     except Exception as e:
         import traceback
         return jsonify({"erro": str(e), "trace": traceback.format_exc()}), 500
 
 @app.route("/api/cache/limpar", methods=["POST"])
 def limpar_cache():
+    """Força invalidação do cache no GitHub."""
     try:
-        if os.path.exists(CACHE_FILE):
-            os.remove(CACHE_FILE)
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CACHE_PATH}"
+        resp = req.get(url, headers={
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }, timeout=10)
+        if resp.status_code == 200:
+            sha = resp.json()["sha"]
+            # Salva cache zerado (ts=0 força expiração imediata)
+            content = json.dumps({"_ts": 0, "payload": None}, ensure_ascii=False)
+            req.put(url, json={
+                "message": "limpar cache painel atingimento",
+                "content": base64.b64encode(content.encode()).decode(),
+                "branch": GITHUB_BRANCH,
+                "sha": sha,
+            }, headers={
+                "Authorization": f"token {GITHUB_TOKEN}",
+                "Accept": "application/vnd.github.v3+json"
+            }, timeout=15)
         _mem.clear()
         return jsonify({"ok": True})
     except Exception as e:
