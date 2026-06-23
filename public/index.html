@@ -29,15 +29,12 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── TOPO ── */
 .topo {
   padding: 36px 52px 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
 }
-
-.topo-left {}
 
 .topo-eyebrow {
   font-size: 9px;
@@ -54,15 +51,10 @@ html, body {
   letter-spacing: -.01em;
   line-height: 1;
   color: var(--white);
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
-.topo-titulo .destaque {
-  color: var(--y4);
-}
-  
+.topo-titulo .destaque { color: var(--y4); }
+
 .topo-right {
   display: flex;
   flex-direction: column;
@@ -77,28 +69,34 @@ html, body {
   color: var(--muted);
 }
 
-.topo-timer {
+.topo-timers {
+  display: flex;
+  gap: 12px;
+}
+
+.timer-chip {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: var(--muted);
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .timer-dot {
   width: 5px; height: 5px;
   border-radius: 50%;
-  background: var(--green);
   animation: pulse 2s ease-in-out infinite;
 }
+
+.timer-dot.fin { background: var(--y4); }
+.timer-dot.reu { background: var(--green); }
 
 @keyframes pulse {
   0%,100% { opacity:1; }
   50%      { opacity:.3; }
 }
 
-/* ── MAIN ── */
 main {
   padding: 44px 52px 60px;
   display: flex;
@@ -120,27 +118,27 @@ main {
   font-size: 13px;
   color: var(--muted);
   margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 0;
 }
 
-.bloco-nums strong {
-  color: var(--white);
-  font-weight: 600;
-}
+.bloco-nums strong { color: var(--white); font-weight: 600; }
 
-.reu-gap-inline {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--muted);
-  margin-left: 14px;
-}
-
+.reu-gap-inline { margin-left: 14px; }
 .reu-gap-inline span { color: var(--y4); font-weight: 700; }
 
-/* ── BARRA ── */
-.bar-wrap {
-  position: relative;
-  padding-bottom: 28px;
+/* skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, var(--muted2) 25%, #1a1a1a 50%, var(--muted2) 75%);
+  background-size: 200% 100%;
+  animation: skeleton 1.4s ease-in-out infinite;
+  border-radius: 4px;
 }
+@keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── BARRA ── */
+.bar-wrap { position: relative; padding-bottom: 28px; }
 
 .bar-track {
   height: 48px;
@@ -171,10 +169,7 @@ main {
   animation: shimmer 2.4s ease-in-out infinite;
 }
 
-@keyframes shimmer {
-  0%   { left: -150%; }
-  100% { left: 200%; }
-}
+@keyframes shimmer { 0% { left:-150%; } 100% { left:200%; } }
 
 .bar-div {
   position: absolute;
@@ -234,7 +229,6 @@ main {
 .prem-item {
   padding: 16px 18px;
   border-right: 1px solid var(--border);
-  position: relative;
 }
 
 .prem-item:last-child { border-right: none; }
@@ -249,23 +243,9 @@ main {
   color: var(--muted);
 }
 
-.prem-nome {
-  font-size: 10px;
-  color: var(--muted);
-  margin-bottom: 12px;
-}
-
-.prem-item.festa .prem-nome {
-  color: var(--y4);
-  font-weight: 600;
-}
-
-.prem-val {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
+.prem-nome { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
+.prem-item.festa .prem-nome { color: var(--y4); font-weight: 600; }
+.prem-val { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 8px; }
 
 .prem-status {
   display: inline-flex;
@@ -279,18 +259,8 @@ main {
   border-radius: 3px;
 }
 
-.prem-status.nao {
-  color: var(--muted);
-  border: 1px solid var(--border);
-  background: transparent;
-}
-
-.prem-status.sim {
-  color: var(--green);
-  border: 1px solid rgba(34,197,94,.3);
-  background: rgba(34,197,94,.06);
-}
-
+.prem-status.nao { color: var(--muted); border: 1px solid var(--border); }
+.prem-status.sim { color: var(--green); border: 1px solid rgba(34,197,94,.3); background: rgba(34,197,94,.06); }
 .prem-status.sim::before { content: '✓ '; }
 
 /* ── ESTADO ── */
@@ -323,7 +293,7 @@ main {
 <body>
 
 <div class="topo">
-  <div class="topo-left">
+  <div>
     <div class="topo-eyebrow">Board Academy · Comercial</div>
     <div class="topo-titulo">
       Reta Final <span class="destaque" id="topo-mes">—</span>
@@ -331,10 +301,16 @@ main {
   </div>
   <div class="topo-right">
     <span class="topo-updated" id="topo-updated">—</span>
-    <span class="topo-timer">
-      <span class="timer-dot"></span>
-      <span id="timer-txt">5:00</span>
-    </span>
+    <div class="topo-timers">
+      <span class="timer-chip">
+        <span class="timer-dot fin"></span>
+        <span>Ganhos <span id="timer-fin">10:00</span></span>
+      </span>
+      <span class="timer-chip">
+        <span class="timer-dot reu"></span>
+        <span>Reuniões <span id="timer-reu">5:00</span></span>
+      </span>
+    </div>
   </div>
 </div>
 
@@ -352,30 +328,84 @@ const NIVEIS = [
   { pct: 100, nome: 'Festa Completa 🎊'     },
 ];
 
-let timerSecs = 300;
-let timerInterval;
+// Estado global
+let estado = {
+  fin: null,
+  reu: null,
+  periodo: null,
+};
 
-function iniciarTimer() {
-  clearInterval(timerInterval);
-  timerSecs = 300;
-  atualizarTimerUI();
-  timerInterval = setInterval(() => {
-    timerSecs--;
-    atualizarTimerUI();
-    if (timerSecs <= 0) carregar();
+// ── Timers independentes ──
+let timerFin = 600, timerReu = 300;
+let intervaloFin, intervaloReu;
+
+function iniciarTimerFin() {
+  clearInterval(intervaloFin);
+  timerFin = 600;
+  intervaloFin = setInterval(() => {
+    timerFin--;
+    atualizarTimerUI('fin', timerFin);
+    if (timerFin <= 0) carregarFinanceiro();
   }, 1000);
 }
 
-function atualizarTimerUI() {
-  const m = Math.floor(timerSecs / 60);
-  const s = timerSecs % 60;
-  document.getElementById('timer-txt').textContent = `${m}:${String(s).padStart(2,'0')}`;
+function iniciarTimerReu() {
+  clearInterval(intervaloReu);
+  timerReu = 300;
+  intervaloReu = setInterval(() => {
+    timerReu--;
+    atualizarTimerUI('reu', timerReu);
+    if (timerReu <= 0) carregarReunioes();
+  }, 1000);
 }
 
+function atualizarTimerUI(tipo, secs) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  document.getElementById(`timer-${tipo}`).textContent = `${m}:${String(s).padStart(2,'0')}`;
+}
+
+// ── Fetch ──
+async function carregarFinanceiro() {
+  try {
+    const resp = await fetch('/api/financeiro');
+    const data = await resp.json();
+    if (data.erro) throw new Error(data.erro);
+    estado.fin     = data.financeiro;
+    estado.periodo = data.periodo;
+    atualizarHeader();
+    renderizar();
+  } catch(e) {
+    console.error('Financeiro erro:', e.message);
+  }
+  iniciarTimerFin();
+}
+
+async function carregarReunioes() {
+  try {
+    const resp = await fetch('/api/reunioes');
+    const data = await resp.json();
+    if (data.erro) throw new Error(data.erro);
+    estado.reu = data.reunioes;
+    renderizar();
+  } catch(e) {
+    console.error('Reuniões erro:', e.message);
+  }
+  iniciarTimerReu();
+}
+
+function atualizarHeader() {
+  const p = estado.periodo || {};
+  document.getElementById('topo-mes').textContent =
+    MESES[(p.mes||1)-1].toUpperCase() + ' ' + p.ano;
+  document.getElementById('topo-updated').textContent =
+    'Atualizado ' + p.atualizado_em;
+}
+
+// ── Format ──
 function brl(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
-
 function pctFmt(v) { return Number(v).toFixed(1) + '%'; }
 
 function corNivel(pct, nivel_pct) {
@@ -383,19 +413,6 @@ function corNivel(pct, nivel_pct) {
   const prox = NIVEIS.find(n => pct < n.pct);
   if (prox && prox.pct === nivel_pct) return 'var(--y4)';
   return 'var(--muted)';
-}
-
-async function carregar() {
-  try {
-    const resp = await fetch('/api/dados');
-    const data = await resp.json();
-    if (data.erro) throw new Error(data.erro);
-    render(data);
-  } catch(e) {
-    document.getElementById('main').innerHTML =
-      `<div class="estado"><span style="color:#7f1d1d;font-size:11px">Erro: ${e.message}</span></div>`;
-  }
-  iniciarTimer();
 }
 
 function barra(pct) {
@@ -408,7 +425,6 @@ function barra(pct) {
         <span class="nl-pct" style="color:${cor}">${n.pct}%</span>
       </div>`;
   }).join('');
-
   return `
   <div class="bar-wrap">
     <div class="bar-track">
@@ -419,13 +435,20 @@ function barra(pct) {
   </div>`;
 }
 
+function barraLoading() {
+  return `
+  <div class="bar-wrap">
+    <div class="bar-track skeleton" style="height:48px"></div>
+  </div>`;
+}
+
 function premios(pct, meta) {
   const items = NIVEIS.map(n => {
     const atingido = pct >= n.pct;
     const festa    = n.pct === 100;
+    const cor      = corNivel(pct, n.pct);
     const val      = meta * n.pct / 100;
     const gap      = Math.max(val - (meta * pct / 100), 0);
-
     return `
     <div class="prem-item ${festa?'festa':''} ${atingido?'atingido':''}">
       <div class="prem-pct">${n.pct}%</div>
@@ -438,53 +461,62 @@ function premios(pct, meta) {
       }
     </div>`;
   }).join('');
-
   return `<div class="prem-grid">${items}</div>`;
 }
 
-function render(data) {
-  const p   = data.periodo || {};
-  const tot = data.total   || {};
+function renderizar() {
+  const fin = estado.fin;
+  const reu = estado.reu;
 
-  document.getElementById('topo-mes').textContent = MESES[(p.mes||1)-1].toUpperCase() + ' ' + p.ano;
-  document.getElementById('topo-updated').textContent = 'Atualizado ' + p.atualizado_em;
-
-  const fin_meta = tot.financeiro?.meta      || 0;
-  const fin_real = tot.financeiro?.realizado  || 0;
+  const fin_meta = fin?.meta      || 0;
+  const fin_real = fin?.realizado  || 0;
   const fin_pct  = fin_meta ? fin_real / fin_meta * 100 : 0;
 
-  const reu_meta = tot.reunioes?.meta       || 0;
-  const reu_real = tot.reunioes?.validadas   || 0;
+  const reu_meta = reu?.meta       || 0;
+  const reu_real = reu?.validadas   || 0;
   const reu_pct  = reu_meta ? reu_real / reu_meta * 100 : 0;
   const reu_gap  = Math.max(reu_meta - reu_real, 0);
 
   document.getElementById('main').innerHTML = `
     <div>
       <div class="bloco-label">Meta Financeira · Closers</div>
-      <div class="bloco-nums"><strong>${brl(fin_real)}</strong> / ${brl(fin_meta)}</div>
-      ${barra(fin_pct)}
+      <div class="bloco-nums">
+        ${fin ? `<strong>${brl(fin_real)}</strong> / ${brl(fin_meta)}` : '<span style="color:var(--muted)">Carregando...</span>'}
+      </div>
+      ${fin ? barra(fin_pct) : barraLoading()}
     </div>
 
     <div>
-      <div class="bloco-label">Meta de Reuniões · SDRs · a partir de hoje</div>
+      <div class="bloco-label">Meta de Reuniões · SDRs · a partir de 22/06</div>
       <div class="bloco-nums">
-        <strong>${reu_real} reuniões</strong> / ${reu_meta} reuniões
-        ${reu_gap > 0
-          ? `<span class="reu-gap-inline">· GAP <span>${reu_gap} reu.</span></span>`
-          : `<span class="reu-gap-inline" style="color:var(--green)">· ✓ Meta batida</span>`
+        ${reu
+          ? `<strong>${reu_real} reuniões</strong> / ${reu_meta} reuniões
+             <span class="reu-gap-inline">
+               ${reu_gap > 0
+                 ? `· GAP <span>${reu_gap} reu.</span>`
+                 : `<span style="color:var(--green)">· ✓ Meta batida</span>`
+               }
+             </span>`
+          : '<span style="color:var(--muted)">Carregando...</span>'
         }
       </div>
-      ${barra(reu_pct)}
+      ${reu ? barra(reu_pct) : barraLoading()}
     </div>
 
+    ${fin ? `
     <div>
       <div class="prem-titulo">Premiações</div>
       ${premios(fin_pct, fin_meta)}
-    </div>
+    </div>` : ''}
   `;
 }
 
-carregar();
+// ── Inicializa ──
+document.getElementById('main').innerHTML =
+  '<div class="estado"><div class="spinner"></div></div>';
+
+// Carrega as duas em paralelo
+Promise.all([carregarFinanceiro(), carregarReunioes()]);
 </script>
 </body>
 </html>
