@@ -27,7 +27,6 @@ FILTER_DEALS      = int(os.environ.get("FILTER_DEALS",      "74674"))
 FILTER_DEALS_RV   = int(os.environ.get("FILTER_DEALS_RV",   "1431880"))
 FILTER_ACTIVITIES = int(os.environ.get("FILTER_ACTIVITIES", "1310451"))
 
-CF_MULTIPLICADOR = "7e0e43c2734751f77be292a72527f638a850ad50"
 CF_QUALIFICADOR  = "a6f13cc27c8d041f3af4091283ce0d4fe0913875"
 
 URL_COLAB    = os.environ.get("URL_COLAB",    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSvwO3Ag2f2cbkVgR1pJZp6fANQcbualGKlAG50fmOljuEGKZ1gJBbSAjRdO3SomXUEVQOWnTvlfHRd/pub?gid=1782440078&single=true&output=csv")
@@ -40,17 +39,21 @@ TIMES_ALVO         = {"elite", "sniper", "olympus", "mgm"}
 META_REUNIOES_FIXA = 250
 DATA_CORTE_REU     = "2026-06-22"
 
+CACHE_TTL_FINANCEIRO = 600   # 10 minutos
+CACHE_TTL_REUNIOES   = 300   # 5 minutos
+
 # ── GITHUB CACHE ─────────────────────────────────────────────
 GITHUB_TOKEN  = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO   = "negocios87-sketch/gerente_comercial"
 GITHUB_BRANCH = "main"
-CACHE_PATH    = "cache/painel_atingimento.json"
-CACHE_TTL     = 480  # 8 minutos
 
-def github_get_cache():
-    """Lê o cache do GitHub. Retorna (payload, sha) ou (None, None)."""
+CACHE_PATH_FIN = "cache/painel_financeiro.json"
+CACHE_PATH_REU = "cache/painel_reunioes.json"
+
+def github_read(path):
+    """Lê arquivo do GitHub. Retorna (conteudo_dict, sha) ou (None, None)."""
     try:
-        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CACHE_PATH}"
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
         resp = req.get(url, headers={
             "Authorization": f"token {GITHUB_TOKEN}",
             "Accept": "application/vnd.github.v3+json"
@@ -60,24 +63,18 @@ def github_get_cache():
         resp.raise_for_status()
         data = resp.json()
         content = base64.b64decode(data["content"]).decode("utf-8")
-        parsed = json.loads(content)
-        sha = data["sha"]
-        # Verifica TTL
-        ts = parsed.get("_ts", 0)
-        if time.time() - ts < CACHE_TTL:
-            return parsed.get("payload"), sha
-        return None, sha  # expirado mas retorna sha para update
+        return json.loads(content), data["sha"]
     except Exception as e:
-        print(f"github_get_cache erro: {e}")
+        print(f"github_read erro {path}: {e}")
         return None, None
 
-def github_set_cache(payload, sha=None):
-    """Salva o cache no GitHub."""
+def github_write(path, payload, sha=None, ttl=600):
+    """Salva arquivo no GitHub com timestamp."""
     try:
-        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CACHE_PATH}"
-        content = json.dumps({"_ts": time.time(), "payload": payload}, ensure_ascii=False)
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
+        content = json.dumps({"_ts": time.time(), "_ttl": ttl, "payload": payload}, ensure_ascii=False)
         body = {
-            "message": "cache painel atingimento",
+            "message": f"cache {path}",
             "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
             "branch": GITHUB_BRANCH,
         }
@@ -88,10 +85,20 @@ def github_set_cache(payload, sha=None):
             "Accept": "application/vnd.github.v3+json"
         }, timeout=15)
         resp.raise_for_status()
+        return resp.json().get("content", {}).get("sha")
     except Exception as e:
-        print(f"github_set_cache erro: {e}")
+        print(f"github_write erro {path}: {e}")
+        return sha
 
-# ── CACHE EM MEMÓRIA (users, pipelines, qual_ids) ────────────
+def cache_get(path, ttl):
+    """Retorna (payload, sha, expirado)."""
+    data, sha = github_read(path)
+    if not data:
+        return None, None, True
+    expirado = time.time() - data.get("_ts", 0) > ttl
+    return data.get("payload"), sha, expirado
+
+# ── CACHE EM MEMÓRIA ─────────────────────────────────────────
 _mem = {}
 MEM_TTL = 300
 
@@ -130,12 +137,6 @@ def get_owner_id(deal):
     uid = deal.get("user_id")
     if isinstance(uid, dict): return uid.get("id")
     return uid
-
-def cf(deal, key):
-    val = deal.get(key)
-    if val is None: return None
-    if isinstance(val, dict): return val.get("value") or val.get("label")
-    return val
 
 def limpar_nans(obj):
     if isinstance(obj, dict): return {k: limpar_nans(v) for k, v in obj.items()}
@@ -299,10 +300,10 @@ def buscar_deals_mes(mes, ano):
         mais = data.get("additional_data", {}).get("pagination", {}).get("more_items_in_collection", False)
         if not mais or not lote or found_older: break
         start += 500
-        time.sleep(0.2)
+        time.sleep(0.3)
     return todos
 
-def buscar_deals_rv_mes(mes, ano):
+def buscar_deals_rv(mes, ano):
     deal_ids_validos = set()
     mapa_owner = {}
     start = 0
@@ -322,10 +323,10 @@ def buscar_deals_rv_mes(mes, ano):
         mais = data.get("additional_data", {}).get("pagination", {}).get("more_items_in_collection", False)
         if not mais or not lote: break
         start += 500
-        time.sleep(0.5)
+        time.sleep(0.8)
     return deal_ids_validos, mapa_owner
 
-def buscar_activities_from_corte(mes, ano):
+def buscar_activities_corte(mes, ano):
     todos, cursor = [], None
     mes_str = f"{ano}-{mes:02d}"
     while True:
@@ -345,9 +346,9 @@ def buscar_activities_from_corte(mes, ano):
         time.sleep(0.3)
     return todos
 
-# ── CÁLCULO PRINCIPAL ─────────────────────────────────────────
+# ── CÁLCULO FINANCEIRO ────────────────────────────────────────
 
-def calcular(mes=None, ano=None):
+def calcular_financeiro(mes=None, ano=None):
     hoje = date.today()
     mes  = mes or hoje.month
     ano  = ano or hoje.year
@@ -365,25 +366,20 @@ def calcular(mes=None, ano=None):
     colab_df   = buscar_colaboradores(mes=mes, ano=ano)
     metas      = buscar_metas(ano, mes)
     users_pipe = buscar_users_pipe()
-    qual_ids   = buscar_qual_ids()
-    deals      = buscar_deals_mes(mes, ano)
     pipes      = buscar_pipelines()
-    deal_ids_validos, mapa_deal_owner = buscar_deals_rv_mes(mes, ano)
-    activities = buscar_activities_from_corte(mes, ano)
+    deals      = buscar_deals_mes(mes, ano)
 
     du_sheet = next((m["dias_uteis"] for m in metas if m["dias_uteis"] > 0), 0)
     du_total = du_sheet if du_sheet > 0 else du_calc
 
     sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
     nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
-
     nome_to_subarea = {}
     for _, row in colab_df.iterrows():
         nn  = norm(str(row.get(nome_col, "")))
         sub = str(row.get(sub_col, "")).strip() if sub_col else ""
         nome_to_subarea[nn] = sub
 
-    nome_norm_to_uid = {norm(name): uid for uid, name in users_pipe.items()}
     uid_to_nome_norm = {uid: norm(name) for uid, name in users_pipe.items()}
 
     closer_real = {}
@@ -410,29 +406,7 @@ def calcular(mes=None, ano=None):
         closer_real[owner_nn]["valor"] += valor
         closer_real[owner_nn]["qtd"]   += 1
 
-    for d in deals:
-        did = d["id"]
-        uid = d.get("user_id")
-        oid = uid.get("id") if isinstance(uid, dict) else uid
-        if oid: mapa_deal_owner.setdefault(did, oid)
-
-    acts_by_owner = {}
-    for act in activities:
-        oid = str(act.get("owner_id", ""))
-        acts_by_owner.setdefault(oid, []).append(act)
-
-    def act_valida_sdr(act):
-        if not (act.get("done") is True or act.get("status") == "done"): return False
-        deal_id    = act.get("deal_id")
-        act_owner  = str(act.get("owner_id", ""))
-        deal_owner = str(mapa_deal_owner.get(deal_id, "")) if deal_id else ""
-        if act_owner and deal_owner and act_owner == deal_owner: return False
-        if deal_id and deal_id not in deal_ids_validos: return False
-        return True
-
     closers_metas = [m for m in metas if m["meta_reu"] == 0 and m["meta_fin"] > 0
-                     and norm(nome_to_subarea.get(m["nome_norm"], "")) in TIMES_ALVO]
-    sdrs_metas    = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0
                      and norm(nome_to_subarea.get(m["nome_norm"], "")) in TIMES_ALVO]
 
     fin_meta = sum(m["meta_fin"] for m in closers_metas)
@@ -445,85 +419,134 @@ def calcular(mes=None, ano=None):
             fin_real += ri["valor"]
             fin_qtd  += ri["qtd"]
 
-    reu_real = 0
-    for m in sdrs_metas:
-        nn      = m["nome_norm"]
-        uid     = nome_norm_to_uid.get(nn)
-        uid_str = str(uid) if uid else ""
-        acts    = acts_by_owner.get(uid_str, [])
-        reu_real += len([a for a in acts if act_valida_sdr(a)])
-
     return limpar_nans({
         "periodo": {
             "mes": mes, "ano": ano,
             "du_total": du_total,
             "du_passados": du_pass,
             "du_restantes": du_rest,
-            "hoje": hoje.strftime("%Y-%m-%d"),
-            "data_corte_reu": DATA_CORTE_REU,
             "atualizado_em": (datetime.now() - timedelta(hours=3)).strftime("%d/%m/%Y %H:%M"),
         },
-        "total": {
-            "financeiro": {
-                "meta":      arred(fin_meta),
-                "realizado": arred(fin_real),
-                "pct":       arred(safe_div(fin_real, fin_meta) * 100),
-                "qtd":       fin_qtd,
-            },
-            "reunioes": {
-                "meta":      META_REUNIOES_FIXA,
-                "validadas": reu_real,
-                "pct":       arred(safe_div(reu_real, META_REUNIOES_FIXA) * 100),
-            },
+        "financeiro": {
+            "meta":      arred(fin_meta),
+            "realizado": arred(fin_real),
+            "pct":       arred(safe_div(fin_real, fin_meta) * 100),
+            "qtd":       fin_qtd,
+        },
+    })
+
+# ── CÁLCULO REUNIÕES ─────────────────────────────────────────
+
+def calcular_reunioes(mes=None, ano=None):
+    hoje = date.today()
+    mes  = mes or hoje.month
+    ano  = ano or hoje.year
+
+    colab_df   = buscar_colaboradores(mes=mes, ano=ano)
+    metas      = buscar_metas(ano, mes)
+    users_pipe = buscar_users_pipe()
+    activities = buscar_activities_corte(mes, ano)
+    deal_ids_validos, mapa_deal_owner = buscar_deals_rv(mes, ano)
+
+    sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
+    nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
+    nome_to_subarea = {}
+    for _, row in colab_df.iterrows():
+        nn  = norm(str(row.get(nome_col, "")))
+        sub = str(row.get(sub_col, "")).strip() if sub_col else ""
+        nome_to_subarea[nn] = sub
+
+    nome_norm_to_uid = {norm(name): uid for uid, name in users_pipe.items()}
+
+    acts_by_owner = {}
+    for act in activities:
+        oid = str(act.get("owner_id", ""))
+        acts_by_owner.setdefault(oid, []).append(act)
+
+    def act_valida(act):
+        if not (act.get("done") is True or act.get("status") == "done"): return False
+        deal_id    = act.get("deal_id")
+        act_owner  = str(act.get("owner_id", ""))
+        deal_owner = str(mapa_deal_owner.get(deal_id, "")) if deal_id else ""
+        if act_owner and deal_owner and act_owner == deal_owner: return False
+        if deal_id and deal_id not in deal_ids_validos: return False
+        return True
+
+    sdrs_metas = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0
+                  and norm(nome_to_subarea.get(m["nome_norm"], "")) in TIMES_ALVO]
+
+    reu_real = 0
+    for m in sdrs_metas:
+        nn      = m["nome_norm"]
+        uid     = nome_norm_to_uid.get(nn)
+        uid_str = str(uid) if uid else ""
+        acts    = acts_by_owner.get(uid_str, [])
+        reu_real += len([a for a in acts if act_valida(a)])
+
+    return limpar_nans({
+        "atualizado_em": (datetime.now() - timedelta(hours=3)).strftime("%d/%m/%Y %H:%M"),
+        "reunioes": {
+            "meta":      META_REUNIOES_FIXA,
+            "validadas": reu_real,
+            "pct":       arred(safe_div(reu_real, META_REUNIOES_FIXA) * 100),
+            "data_corte": DATA_CORTE_REU,
         },
     })
 
 # ── ROTAS ─────────────────────────────────────────────────────
 
-@app.route("/api/dados")
-def api_dados():
+@app.route("/api/financeiro")
+def api_financeiro():
     try:
         mes = freq.args.get("mes", type=int)
         ano = freq.args.get("ano", type=int)
-
-        # Só usa cache quando não tem parâmetro de mês/ano
         if not mes and not ano:
-            payload, sha = github_get_cache()
-            if payload:
+            payload, sha, expirado = cache_get(CACHE_PATH_FIN, CACHE_TTL_FINANCEIRO)
+            if payload and not expirado:
                 return jsonify(payload)
-            # Cache expirado ou inexistente — recalcula
-            result = calcular()
-            github_set_cache(result, sha)
+            result = calcular_financeiro()
+            github_write(CACHE_PATH_FIN, result, sha, CACHE_TTL_FINANCEIRO)
             return jsonify(result)
+        return jsonify(calcular_financeiro(mes=mes, ano=ano))
+    except Exception as e:
+        import traceback
+        return jsonify({"erro": str(e), "trace": traceback.format_exc()}), 500
 
-        return jsonify(calcular(mes=mes, ano=ano))
-
+@app.route("/api/reunioes")
+def api_reunioes():
+    try:
+        mes = freq.args.get("mes", type=int)
+        ano = freq.args.get("ano", type=int)
+        if not mes and not ano:
+            payload, sha, expirado = cache_get(CACHE_PATH_REU, CACHE_TTL_REUNIOES)
+            if payload and not expirado:
+                return jsonify(payload)
+            result = calcular_reunioes()
+            github_write(CACHE_PATH_REU, result, sha, CACHE_TTL_REUNIOES)
+            return jsonify(result)
+        return jsonify(calcular_reunioes(mes=mes, ano=ano))
     except Exception as e:
         import traceback
         return jsonify({"erro": str(e), "trace": traceback.format_exc()}), 500
 
 @app.route("/api/cache/limpar", methods=["POST"])
 def limpar_cache():
-    """Força invalidação do cache no GitHub."""
     try:
-        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CACHE_PATH}"
-        resp = req.get(url, headers={
-            "Authorization": f"token {GITHUB_TOKEN}",
-            "Accept": "application/vnd.github.v3+json"
-        }, timeout=10)
-        if resp.status_code == 200:
-            sha = resp.json()["sha"]
-            # Salva cache zerado (ts=0 força expiração imediata)
-            content = json.dumps({"_ts": 0, "payload": None}, ensure_ascii=False)
-            req.put(url, json={
-                "message": "limpar cache painel atingimento",
-                "content": base64.b64encode(content.encode()).decode(),
-                "branch": GITHUB_BRANCH,
-                "sha": sha,
-            }, headers={
-                "Authorization": f"token {GITHUB_TOKEN}",
-                "Accept": "application/vnd.github.v3+json"
-            }, timeout=15)
+        for path in [CACHE_PATH_FIN, CACHE_PATH_REU]:
+            _, sha = github_read(path)
+            if sha:
+                content = json.dumps({"_ts": 0, "payload": None}, ensure_ascii=False)
+                req.put(
+                    f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}",
+                    json={
+                        "message": "limpar cache",
+                        "content": base64.b64encode(content.encode()).decode(),
+                        "branch": GITHUB_BRANCH,
+                        "sha": sha,
+                    },
+                    headers={"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"},
+                    timeout=15
+                )
         _mem.clear()
         return jsonify({"ok": True})
     except Exception as e:
@@ -545,26 +568,6 @@ def debug_metas():
         "mes": mes, "ano": ano,
         "closers_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_fin": m["meta_fin"]} for m in closers_alvo],
         "total_filtrado": sum(m["meta_fin"] for m in closers_alvo),
-    })
-
-@app.route("/api/debug/sdrs")
-def debug_sdrs():
-    hoje = date.today()
-    mes = freq.args.get("mes", type=int) or hoje.month
-    ano = freq.args.get("ano", type=int) or hoje.year
-    metas = buscar_metas(ano, mes)
-    colab_df = buscar_colaboradores(mes=mes, ano=ano)
-    sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
-    nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
-    nome_to_sub = {norm(str(row.get(nome_col,""))): str(row.get(sub_col,"")).strip() for _, row in colab_df.iterrows()} if sub_col else {}
-    sdrs_alvo = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0
-                 and norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
-    return jsonify({
-        "mes": mes, "ano": ano,
-        "sdrs_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_reu": m["meta_reu"]} for m in sdrs_alvo],
-        "total_meta_reu": sum(m["meta_reu"] for m in sdrs_alvo),
-        "meta_fixa_painel": META_REUNIOES_FIXA,
-        "data_corte": DATA_CORTE_REU,
     })
 
 @app.route("/")
