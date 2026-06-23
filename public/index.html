@@ -69,10 +69,7 @@ html, body {
   color: var(--muted);
 }
 
-.topo-timers {
-  display: flex;
-  gap: 12px;
-}
+.topo-timers { display: flex; gap: 12px; }
 
 .timer-chip {
   font-family: 'JetBrains Mono', monospace;
@@ -92,10 +89,7 @@ html, body {
 .timer-dot.fin { background: var(--y4); }
 .timer-dot.reu { background: var(--green); }
 
-@keyframes pulse {
-  0%,100% { opacity:1; }
-  50%      { opacity:.3; }
-}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
 
 main {
   padding: 44px 52px 60px;
@@ -120,7 +114,6 @@ main {
   margin-bottom: 14px;
   display: flex;
   align-items: center;
-  gap: 0;
 }
 
 .bloco-nums strong { color: var(--white); font-weight: 600; }
@@ -128,7 +121,6 @@ main {
 .reu-gap-inline { margin-left: 14px; }
 .reu-gap-inline span { color: var(--y4); font-weight: 700; }
 
-/* skeleton loading */
 .skeleton {
   background: linear-gradient(90deg, var(--muted2) 25%, #1a1a1a 50%, var(--muted2) 75%);
   background-size: 200% 100%;
@@ -243,15 +235,33 @@ main {
   color: var(--muted);
 }
 
-.prem-nome { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
+.prem-nome {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.prem-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.prem-gap {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* festa completa — tudo amarelo exceto "Não conquistado" */
+.prem-item.festa .prem-pct  { color: var(--y4); }
 .prem-item.festa .prem-nome { color: var(--y4); font-weight: 600; }
-.prem-item.festa .prem-pct { color: var(--y4); }
-.prem-item.festa .prem-val { color: var(--y4); }
-.prem-item.festa .prem-gap { color: var(--y4) !important; }
-.prem-status.nao { color: var(--muted); border: 1px solid var(--border); }
-.prem-status.sim { color: var(--green); border: 1px solid rgba(34,197,94,.3); background: rgba(34,197,94,.06); }
-.prem-status.sim::before { content: '✓ '; }
-.prem-val { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+.prem-item.festa .prem-val  { color: var(--y4); }
+.prem-item.festa .prem-gap  { color: var(--y4); }
 
 .prem-status {
   display: inline-flex;
@@ -265,7 +275,18 @@ main {
   border-radius: 3px;
 }
 
-.prem-item.festa .prem-status.nao { color: var(--y4) !important; border-color: rgba(232,184,0,.3); }
+.prem-status.nao {
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.prem-status.sim {
+  color: var(--green);
+  border: 1px solid rgba(34,197,94,.3);
+  background: rgba(34,197,94,.06);
+}
+
+.prem-status.sim::before { content: '✓ '; }
 
 /* ── ESTADO ── */
 .estado {
@@ -332,14 +353,7 @@ const NIVEIS = [
   { pct: 100, nome: 'Festa Completa 🎊'     },
 ];
 
-// Estado global
-let estado = {
-  fin: null,
-  reu: null,
-  periodo: null,
-};
-
-// ── Timers independentes ──
+let estado = { fin: null, reu: null, periodo: null };
 let timerFin = 600, timerReu = 300;
 let intervaloFin, intervaloReu;
 
@@ -369,7 +383,6 @@ function atualizarTimerUI(tipo, secs) {
   document.getElementById(`timer-${tipo}`).textContent = `${m}:${String(s).padStart(2,'0')}`;
 }
 
-// ── Fetch ──
 async function carregarFinanceiro() {
   try {
     const resp = await fetch('/api/financeiro');
@@ -406,7 +419,6 @@ function atualizarHeader() {
     'Atualizado ' + p.atualizado_em;
 }
 
-// ── Format ──
 function brl(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
@@ -440,27 +452,23 @@ function barra(pct) {
 }
 
 function barraLoading() {
-  return `
-  <div class="bar-wrap">
-    <div class="bar-track skeleton" style="height:48px"></div>
-  </div>`;
+  return `<div class="bar-wrap"><div class="bar-track skeleton" style="height:48px"></div></div>`;
 }
 
 function premios(pct, meta) {
   const items = NIVEIS.map(n => {
     const atingido = pct >= n.pct;
     const festa    = n.pct === 100;
-    const cor      = corNivel(pct, n.pct);
     const val      = meta * n.pct / 100;
     const gap      = Math.max(val - (meta * pct / 100), 0);
     return `
-    <div class="prem-item ${festa?'festa':''} ${atingido?'atingido':''}">
+    <div class="prem-item ${festa ? 'festa' : ''} ${atingido ? 'atingido' : ''}">
       <div class="prem-pct">${n.pct}%</div>
       <div class="prem-nome">${n.nome}</div>
       <div class="prem-val">${brl(val)}</div>
       ${atingido
         ? `<div class="prem-status sim">Conquistado</div>`
-        : `<div style="margin-bottom:6px"><span class="prem-gap" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;">GAP ${brl(gap)}</span></div>
+        : `<div class="prem-gap">GAP ${brl(gap)}</div>
            <div class="prem-status nao">Não conquistado</div>`
       }
     </div>`;
@@ -476,8 +484,8 @@ function renderizar() {
   const fin_real = fin?.realizado  || 0;
   const fin_pct  = fin_meta ? fin_real / fin_meta * 100 : 0;
 
-  const reu_meta = reu?.meta       || 0;
-  const reu_real = reu?.validadas   || 0;
+  const reu_meta = reu?.meta      || 0;
+  const reu_real = reu?.validadas  || 0;
   const reu_pct  = reu_meta ? reu_real / reu_meta * 100 : 0;
   const reu_gap  = Math.max(reu_meta - reu_real, 0);
 
@@ -485,7 +493,9 @@ function renderizar() {
     <div>
       <div class="bloco-label">Meta Financeira · Closers</div>
       <div class="bloco-nums">
-        ${fin ? `<strong>${brl(fin_real)}</strong> / ${brl(fin_meta)}` : '<span style="color:var(--muted)">Carregando...</span>'}
+        ${fin
+          ? `<strong>${brl(fin_real)}</strong> / ${brl(fin_meta)}`
+          : '<span style="color:var(--muted)">Carregando...</span>'}
       </div>
       ${fin ? barra(fin_pct) : barraLoading()}
     </div>
@@ -501,8 +511,7 @@ function renderizar() {
                  : `<span style="color:var(--green)">· ✓ Meta batida</span>`
                }
              </span>`
-          : '<span style="color:var(--muted)">Carregando...</span>'
-        }
+          : '<span style="color:var(--muted)">Carregando...</span>'}
       </div>
       ${reu ? barra(reu_pct) : barraLoading()}
     </div>
@@ -515,11 +524,9 @@ function renderizar() {
   `;
 }
 
-// ── Inicializa ──
 document.getElementById('main').innerHTML =
   '<div class="estado"><div class="spinner"></div></div>';
 
-// Carrega as duas em paralelo
 Promise.all([carregarFinanceiro(), carregarReunioes()]);
 </script>
 </body>
