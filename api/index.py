@@ -27,6 +27,7 @@ FILTER_DEALS      = int(os.environ.get("FILTER_DEALS",      "74674"))
 FILTER_DEALS_RV   = int(os.environ.get("FILTER_DEALS_RV",   "1431880"))
 FILTER_ACTIVITIES = int(os.environ.get("FILTER_ACTIVITIES", "1310451"))
 
+CF_MULTIPLICADOR = "7e0e43c2734751f77be292a72527f638a850ad50"
 CF_QUALIFICADOR  = "a6f13cc27c8d041f3af4091283ce0d4fe0913875"
 
 URL_COLAB    = os.environ.get("URL_COLAB",    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSvwO3Ag2f2cbkVgR1pJZp6fANQcbualGKlAG50fmOljuEGKZ1gJBbSAjRdO3SomXUEVQOWnTvlfHRd/pub?gid=1782440078&single=true&output=csv")
@@ -39,19 +40,18 @@ TIMES_ALVO         = {"elite", "sniper", "olympus", "mgm"}
 META_REUNIOES_FIXA = 250
 DATA_CORTE_REU     = "2026-06-22"
 
-CACHE_TTL_FINANCEIRO = 600   # 10 minutos
-CACHE_TTL_REUNIOES   = 300   # 5 minutos
+CACHE_TTL_FINANCEIRO = 600
+CACHE_TTL_REUNIOES   = 300
 
-# ── GITHUB CACHE ─────────────────────────────────────────────
 GITHUB_TOKEN  = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO   = "negocios87-sketch/gerente_comercial"
 GITHUB_BRANCH = "main"
-
 CACHE_PATH_FIN = "cache/painel_financeiro.json"
 CACHE_PATH_REU = "cache/painel_reunioes.json"
 
+# ── GITHUB CACHE ─────────────────────────────────────────────
+
 def github_read(path):
-    """Lê arquivo do GitHub. Retorna (conteudo_dict, sha) ou (None, None)."""
     try:
         url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
         resp = req.get(url, headers={
@@ -69,7 +69,6 @@ def github_read(path):
         return None, None
 
 def github_write(path, payload, sha=None, ttl=600):
-    """Salva arquivo no GitHub com timestamp."""
     try:
         url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
         content = json.dumps({"_ts": time.time(), "_ttl": ttl, "payload": payload}, ensure_ascii=False)
@@ -85,13 +84,10 @@ def github_write(path, payload, sha=None, ttl=600):
             "Accept": "application/vnd.github.v3+json"
         }, timeout=15)
         resp.raise_for_status()
-        return resp.json().get("content", {}).get("sha")
     except Exception as e:
         print(f"github_write erro {path}: {e}")
-        return sha
 
 def cache_get(path, ttl):
-    """Retorna (payload, sha, expirado)."""
     data, sha = github_read(path)
     if not data:
         return None, None, True
@@ -127,6 +123,12 @@ def arred(v):
 def safe_div(a, b):
     try: return float(a) / float(b) if b else 0.0
     except: return 0.0
+
+def cf(deal, key):
+    val = deal.get(key)
+    if val is None: return None
+    if isinstance(val, dict): return val.get("value") or val.get("label")
+    return val
 
 def get_owner_name(deal):
     uid = deal.get("user_id")
@@ -382,6 +384,13 @@ def calcular_financeiro(mes=None, ano=None):
 
     uid_to_nome_norm = {uid: norm(name) for uid, name in users_pipe.items()}
 
+    def valor_multi(deal):
+        v = cf(deal, CF_MULTIPLICADOR)
+        try:
+            return float(str(v).replace(",", ".")) if v is not None else 0.0
+        except:
+            return 0.0
+
     closer_real = {}
     for deal in deals:
         owner_nn = norm(get_owner_name(deal))
@@ -389,11 +398,9 @@ def calcular_financeiro(mes=None, ano=None):
             oid = get_owner_id(deal)
             owner_nn = uid_to_nome_norm.get(oid, "")
         if not owner_nn: continue
-        v_multi = cf(deal, "7e0e43c2734751f77be292a72527f638a850ad50")
-        try:
-            valor = float(str(v_multi).replace(",", ".")) if v_multi is not None else 0.0
-        except:
-            valor = 0.0
+
+        valor = valor_multi(deal)
+
         if owner_nn == DENISE_NORM:
             pipe_id   = deal.get("pipeline_id")
             pipe_norm = pipes.get(pipe_id, "")
@@ -405,6 +412,7 @@ def calcular_financeiro(mes=None, ano=None):
                 closer_real[k]["valor"] += valor
                 closer_real[k]["qtd"]   += 1
                 continue
+
         if owner_nn not in closer_real:
             closer_real[owner_nn] = {"valor": 0, "qtd": 0}
         closer_real[owner_nn]["valor"] += valor
@@ -572,6 +580,26 @@ def debug_metas():
         "mes": mes, "ano": ano,
         "closers_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_fin": m["meta_fin"]} for m in closers_alvo],
         "total_filtrado": sum(m["meta_fin"] for m in closers_alvo),
+    })
+
+@app.route("/api/debug/sdrs")
+def debug_sdrs():
+    hoje = date.today()
+    mes = freq.args.get("mes", type=int) or hoje.month
+    ano = freq.args.get("ano", type=int) or hoje.year
+    metas = buscar_metas(ano, mes)
+    colab_df = buscar_colaboradores(mes=mes, ano=ano)
+    sub_col  = next((c for c in colab_df.columns if norm(c) == "subarea"), None)
+    nome_col = next((c for c in colab_df.columns if norm(c) == "nome"), "Nome")
+    nome_to_sub = {norm(str(row.get(nome_col,""))): str(row.get(sub_col,"")).strip() for _, row in colab_df.iterrows()} if sub_col else {}
+    sdrs_alvo = [m for m in metas if m["meta_reu"] > 0 and m["meta_fin"] > 0
+                 and norm(nome_to_sub.get(m["nome_norm"], "")) in TIMES_ALVO]
+    return jsonify({
+        "mes": mes, "ano": ano,
+        "sdrs_filtrados": [{"nome": m["nome"], "subarea": nome_to_sub.get(m["nome_norm"], "?"), "meta_reu": m["meta_reu"]} for m in sdrs_alvo],
+        "total_meta_reu": sum(m["meta_reu"] for m in sdrs_alvo),
+        "meta_fixa_painel": META_REUNIOES_FIXA,
+        "data_corte": DATA_CORTE_REU,
     })
 
 @app.route("/")
