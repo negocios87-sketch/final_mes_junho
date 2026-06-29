@@ -389,7 +389,11 @@ def calcular_financeiro(mes=None, ano=None):
             oid = get_owner_id(deal)
             owner_nn = uid_to_nome_norm.get(oid, "")
         if not owner_nn: continue
-        valor = float(cf(deal, "7e0e43c2734751f77be292a72527f638a850ad50") or 0)
+        v_multi = cf(deal, "7e0e43c2734751f77be292a72527f638a850ad50")
+        try:
+            valor = float(str(v_multi).replace(",", ".")) if v_multi is not None else 0.0
+        except:
+            valor = 0.0
         if owner_nn == DENISE_NORM:
             pipe_id   = deal.get("pipeline_id")
             pipe_norm = pipes.get(pipe_id, "")
